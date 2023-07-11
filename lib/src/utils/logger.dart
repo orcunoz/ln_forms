@@ -9,7 +9,7 @@ class Log {
       printer: HybridPrinter(LnPrinter(),
           error: PrettyPrinter(noBoxingByDefault: true)));
 
-  static formLog(String fieldType, String functionName, int fieldLevel,
+  static form(String fieldType, String functionName, int fieldLevel,
       {required String? fieldName}) {
     assert(fieldLevel >= 1);
     String? fieldNameLine = fieldName?.pascalCase.toFixed(20, fillChar: "_");
@@ -19,7 +19,7 @@ class Log {
     String levelLine = "".toFixed((fieldLevel - 1) * 3, fillChar: "=");
     String messageLine = "$levelLine$fieldTypeStr"
         "$fieldNameLine.$functionName";
-    _logger.d(messageLine, null);
+    _logger.d(messageLine);
   }
 
   static e(dynamic errorOrMessage, {StackTrace? stackTrace}) {
@@ -32,7 +32,7 @@ class Log {
   }
 
   static wtf(dynamic message) {
-    _logger.wtf(message.toString());
+    _logger.wtf("WTF!.$message");
   }
 }
 

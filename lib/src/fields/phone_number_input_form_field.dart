@@ -27,17 +27,17 @@ class PhoneNumberInputFormField extends TextInputFormField {
           decoration: decoration?.copyWith(
             suffixIcon:
                 decoration.suffixIcon ?? const Icon(Icons.add_ic_call_rounded),
-            prefixText: "${prefixTextByCountryCode(countryCode)} ",
+            prefixText: "+$countryCode ",
           ),
           inputFormatters: [
             _inputFormatter,
           ],
           keyboardType: TextInputType.phone,
-          initialValue: initialValue,
+          initialValue: initialValue == null
+              ? null
+              : _inputFormatter.maskText(initialValue),
           onChanged: (val) => onChanged?.call(
             val == null ? null : _inputFormatter.unmaskText(val),
           ),
         );
-
-  static String prefixTextByCountryCode(int countryCode) => "+$countryCode";
 }

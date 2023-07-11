@@ -141,7 +141,7 @@ class MultipleTextInputFormFieldState
       }
       _addItemIfValid(editingText);
     } else {
-      setState(() {});
+      rebuild();
     }
 
     super.handleFocusChanged(hasFocus);

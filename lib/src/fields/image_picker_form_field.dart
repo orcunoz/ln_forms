@@ -1,5 +1,9 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
+import 'package:ln_forms/src/utils/logger.dart';
 import 'package:universal_io/io.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ln_forms/ln_forms.dart';
@@ -38,26 +42,7 @@ class ImagePickerFormField extends InputFormField<String> {
                     inputBorder?.borderRadius ?? BorderRadius.circular(8),
                 clipBehavior: Clip.antiAlias,
                 child: field.value != null
-                    ? Image(
-                        image: NetworkImage(field.value!),
-                        alignment: Alignment.center,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          return loadingProgress == null
-                              ? child
-                              : const CircularProgressIndicator();
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.image_not_supported_outlined,
-                            size: 72,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .error
-                                .withOpacity(0.5),
-                          );
-                        },
-                      )
+                    ? field.buildImageWidget(field.context, field.value!)
                     : Icon(
                         Icons.image_search_rounded,
                         size: 72,
@@ -85,15 +70,33 @@ class ImagePickerFormFieldState extends InputFormFieldState<String>
       );
 
   @override
-  Future<String?> toFuture() {
-    return ImagePicker().pickImage(source: widget.source).then(
-        (pickedFile) async =>
-            pickedFile == null ? null : await File(pickedFile.path).toBase64());
+  Future<String?> toFuture() async {
+    final pickedFile = await ImagePicker().pickImage(source: widget.source);
+
+    if (pickedFile != null) {
+      return await File(pickedFile.path).toBase64();
+    }
+
+    return null;
   }
 
-  Widget buildImageWidget(BuildContext context, String? imageUrl) {
-    return Image.network(
-      imageUrl ?? "",
+  String? _lastSavedImageUrl;
+  Uint8List? _decodedImage;
+
+  Widget buildImageWidget(BuildContext context, String imageUrl) {
+    ImageProvider<Object> imageProvider;
+    if (imageUrl.startsWith("http")) {
+      imageProvider = NetworkImage(imageUrl);
+    } else {
+      if (_lastSavedImageUrl != imageUrl) {
+        _decodedImage = base64Decode(imageUrl);
+        _lastSavedImageUrl = imageUrl;
+      }
+      imageProvider = MemoryImage(_decodedImage!);
+    }
+
+    return Image(
+      image: imageProvider,
       alignment: Alignment.center,
       fit: BoxFit.contain,
       loadingBuilder: (context, child, loadingProgress) {

@@ -2,6 +2,7 @@ name: ln_forms
 description: A starting point for Dart libraries or applications.
 version: 1.0.0
 repository: https://github.com/orcunoz/ln_forms
+publish_to: none
 
 environment:
   sdk: ^3.0.5
@@ -18,10 +19,16 @@ dependencies:
   mask_text_input_formatter:
   url_launcher:
   image_picker:
+  image_picker_windows:
+  logger:
   ln_core:
-    path: ../ln_core
+    git:
+      url: https://github.com/orcunoz/ln_core
+      ref: main
   ln_dialogs:
-    path: ../ln_dialogs
+    git:
+      url: https://github.com/orcunoz/ln_dialogs
+      ref: main
 
 flutter:
   uses-material-design: true

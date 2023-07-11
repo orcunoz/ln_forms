@@ -124,9 +124,10 @@ class TextInputFormFieldState extends InputFormFieldState<String> {
   Widget? get editingActionButton => obscureContentButtonIsVisible
       ? IconButton(
           icon: const Icon(Icons.remove_red_eye_rounded),
-          onPressed: () => setState(() {
+          onPressed: () {
             _obscureContentIsVisible = true;
-          }),
+            rebuild();
+          },
           focusNode: editingActionButtonFocusNode,
         )
       : super.editingActionButton;

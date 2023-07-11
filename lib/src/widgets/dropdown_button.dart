@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_core/ln_core.dart';
+import 'package:ln_forms/ln_forms.dart';
 
 const Duration _kDropdownMenuDuration = Duration(milliseconds: 300);
 const EdgeInsets _defaultMenuMargin = EdgeInsets.symmetric(vertical: 10);
@@ -455,7 +456,7 @@ class _DropdownRoute<T> extends PopupRoute<T> {
     required this.menuHeightLimit,
     required this.availableHeight,
     required this.searchable,
-    this.primaryScrollController,
+    this.lnFormState,
     required this.dropdownPosition,
   }) : itemHeights = List<double?>.filled(items.length, itemHeight);
 
@@ -473,7 +474,7 @@ class _DropdownRoute<T> extends PopupRoute<T> {
   final double? menuHeightLimit;
   final double availableHeight;
   final bool searchable;
-  final ScrollController? primaryScrollController;
+  final LnFormFocusTarget? lnFormState;
   final DropdownPosition dropdownPosition;
 
   final List<double?> itemHeights;
@@ -532,40 +533,31 @@ class _DropdownRoute<T> extends PopupRoute<T> {
   }
 
   _setOverflowScroll() {
-    final primaryController = primaryScrollController;
+    final controller = lnFormState?.scrollController;
+    overflowScrollOffset = 0;
 
-    if (primaryController != null) {
+    if (controller?.hasClients == true) {
+      final maxScroll = controller!.position.maxScrollExtent;
       double newOuterScrollOffset =
-          primaryController.offset + menuLimits.outerScrollOffset;
+          controller.offset + menuLimits.outerScrollOffset;
       overflowScrollOffset = 0;
 
-      if (newOuterScrollOffset > primaryController.position.maxScrollExtent) {
-        overflowScrollOffset =
-            newOuterScrollOffset - primaryController.position.maxScrollExtent;
-        newOuterScrollOffset = primaryController.position.maxScrollExtent;
+      if (newOuterScrollOffset > maxScroll) {
+        overflowScrollOffset = newOuterScrollOffset - maxScroll;
+        newOuterScrollOffset = maxScroll;
       }
 
       if (newOuterScrollOffset < 0) {
         overflowScrollOffset = newOuterScrollOffset;
         newOuterScrollOffset = 0;
       }
-
-      if (primaryController.runtimeType.toString() ==
-          "LnPrimaryScrollController") {
-        // TODO
-        if (overflowScrollOffset < 0) {
-          (primaryController as dynamic).setAdditionalPadding(
-              EdgeInsets.only(top: -overflowScrollOffset));
-        } else if (overflowScrollOffset > 0) {
-          (primaryController as dynamic).setAdditionalPadding(
-              EdgeInsets.only(bottom: overflowScrollOffset));
-        }
-      }
     }
+
+    lnFormState?.setTranslationY(-overflowScrollOffset);
   }
 
   _setScrollPositions() {
-    final primaryController = primaryScrollController;
+    final primaryController = lnFormState?.scrollController;
 
     if (primaryController != null) {
       double newOuterScrollOffset =
@@ -586,14 +578,7 @@ class _DropdownRoute<T> extends PopupRoute<T> {
 
   void _dismiss() {
     if (overflowScrollOffset != 0) {
-      final primaryController = primaryScrollController;
-
-      if (primaryController.runtimeType.toString() ==
-          "LnPrimaryScrollController") {
-        // TODO
-        (primaryController as dynamic).setAdditionalPadding(EdgeInsets.zero);
-        overflowScrollOffset = 0;
-      }
+      lnFormState?.setTranslationY(0);
     }
 
     if (isActive) {
@@ -1125,7 +1110,7 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
       availableHeight: availableHeight,
       fixedWidth: widget.fixedWidth ?? buttonRect.width,
       searchable: widget.searchable,
-      primaryScrollController: PrimaryScrollController.maybeOf(context),
+      lnFormState: LnFormFocusTarget.of(context),
       dropdownPosition: effectiveDropdownPosition,
     );
 

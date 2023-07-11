@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ln_forms/src/utils/logger.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:ln_core/ln_core.dart';
 
 import 'ln_forms_base.dart';
-
-typedef SetState = void Function(VoidCallback voidCallback);
 
 class InputFormField<T> extends FormField<T> {
   final TextStyle? style;
@@ -49,7 +48,7 @@ class InputFormField<T> extends FormField<T> {
 
             Widget child = state.isEmpty && readOnly
                 ? EmptyReadOnlyStatePlaceholder(
-                    color: state.baseTextStyle.color?.withOpacity(0.9),
+                    color: Theme.of(state.context).hintColor,
                   )
                 : builder(state) ?? const SizedBox();
 
@@ -118,6 +117,26 @@ class InputFormField<T> extends FormField<T> {
               child: child,
             );
 
+/*            child = Stack(
+              children: [
+                child,
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Tooltip(
+                      message: "Changed and not saved",
+                      child: Container(
+                        height: 6,
+                        width: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade300,
+                          borderRadius: BorderRadius.circular(100),
+                          boxShadow: [ElevationBoxShadow(0)],
+                        ),
+                      )),
+                ),
+              ],
+            );*/
+
             return GestureDetector(
               onTap: () => state.isActive ? state.handleTap() : null,
               child: child,
@@ -135,6 +154,8 @@ bool _isEmpty(dynamic value) =>
     (value is Iterable && value.isEmpty);
 
 class InputFormFieldState<T> extends FormFieldState<T> {
+  int _generation = 0;
+
   T? _stateInitialValue;
   bool _focusedBefore = false;
   bool _isPassed = false;
@@ -196,7 +217,6 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
   MouseCursor get effectiveMouseCursor => MouseCursor.defer;
 
-  @mustCallSuper
   LnDecoration get baseDecoration => const LnDecoration();
 
   InputDecoration? _effectiveDecoration;
@@ -249,12 +269,37 @@ class InputFormFieldState<T> extends FormFieldState<T> {
       );
     }
 
+    /*decoration = decoration.copyWith(
+      label: SpacedRow(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: decoration.label ?? Text(decoration.labelText ?? "")),
+          Container(
+            height: 10,
+            width: 10,
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: [ElevationBoxShadow(1)],
+            ),
+          ),
+        ],
+      ),
+    );*/
+
     return decoration;
   }
 
   void _createInternalFocusNode() {
     assert(_internalNode == null);
     _internalNode = FocusNode();
+  }
+
+  void rebuild() {
+    if (!mounted) return;
+    setState(() {
+      ++_generation;
+    });
   }
 
   @override
@@ -333,15 +378,14 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   void handleFocusChanged(bool hasFocus) {
     debugLog("handler -> focusChange: $hasFocus", StackTrace.current);
 
-    setState(() {
-      if (hasFocus) {
-        _focusedBefore = true;
-      } else if (_focusedBefore) {
-        if (!isFocused) {
-          _isPassed = true;
-        }
+    if (hasFocus) {
+      _focusedBefore = true;
+    } else if (_focusedBefore) {
+      if (!isFocused) {
+        _isPassed = true;
       }
-    });
+    }
+    rebuild();
   }
 
   @mustCallSuper
@@ -380,9 +424,8 @@ class InputFormFieldState<T> extends FormFieldState<T> {
     if (hovering == _isHovering) return;
     debugLog("handler -> hover: $hovering", StackTrace.current);
 
-    setState(() {
-      _isHovering = hovering;
-    });
+    _isHovering = hovering;
+    rebuild();
   }
 
   @mustCallSuper
@@ -418,9 +461,9 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   }
 
   void debugLog(String functionName, StackTrace stackTrace) {
-    /*Log.formLog(
+    Log.form(
         widget.runtimeType.toString().split("FormField").first, functionName, 1,
-        fieldName: widget.decoration?.label ?? widget.decoration?.hint ?? "");*/
+        fieldName: widget.decoration?.label ?? widget.decoration?.hint ?? "");
   }
 }
 
@@ -484,6 +527,7 @@ mixin FutureFormField<T> on InputFormFieldState<T> {
     final result = await future;
 
     //effectiveFocusNode.requestFocus();
+    rebuild();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       future = null;

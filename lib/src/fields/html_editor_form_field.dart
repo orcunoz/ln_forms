@@ -90,7 +90,7 @@ class _HtmlEditorFormFieldState extends InputFormFieldState<String>
             controller: _controller,
             clipBehavior: Clip.antiAlias,
           ),
-          const Divider(height: .5),
+          const Divider(height: .5, thickness: .5),
           Expanded(
             child: LayoutBuilder(builder: (context, constraints) {
               return QuillHtmlEditor(
