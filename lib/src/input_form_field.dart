@@ -64,12 +64,14 @@ class InputFormField<T> extends FormField<T> {
             }
 
             if (decoration != null) {
+              InputDecoration decoration = state.effectiveDecoration;
+
               child = AnimatedBuilder(
                 animation: state.effectiveFocusNode,
                 builder: (BuildContext context, Widget? child) {
                   return InputDecorator(
                     textAlignVertical: TextAlignVertical.center,
-                    decoration: state.effectiveDecoration,
+                    decoration: decoration,
                     baseStyle: state.baseTextStyle,
                     isHovering: state.isHovering,
                     isFocused: state.isFocused,
@@ -79,6 +81,18 @@ class InputFormField<T> extends FormField<T> {
                 },
                 child: child,
               );
+
+              /*bool notSaved = state._stateInitialValue != state.value;
+              child = Container(
+                padding: EdgeInsets.only(right: notSaved ? 6 : 0),
+                decoration: BoxDecoration(
+                  color: notSaved
+                      ? Color.fromARGB(255, 255, 199, 116)
+                      : Colors.transparent,
+                  borderRadius: decoration.borderRadius,
+                ),
+                child: child,
+              );*/
             }
 
             child = Opacity(
@@ -116,26 +130,6 @@ class InputFormField<T> extends FormField<T> {
                   : KeyEventResult.ignored,
               child: child,
             );
-
-/*            child = Stack(
-              children: [
-                child,
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Tooltip(
-                      message: "Changed and not saved",
-                      child: Container(
-                        height: 6,
-                        width: 6,
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade300,
-                          borderRadius: BorderRadius.circular(100),
-                          boxShadow: [ElevationBoxShadow(0)],
-                        ),
-                      )),
-                ),
-              ],
-            );*/
 
             return GestureDetector(
               onTap: () => state.isActive ? state.handleTap() : null,
@@ -346,7 +340,7 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
     if (widget.initialValue != _stateInitialValue) {
       debugLog(
-          "didChangeDependencies: initialValueChanged: "
+          "didChangeDependencies -> initialValueChanged: "
           "${widget.initialValue?.toString().limitLength(30)}->"
           "${_stateInitialValue?.toString().limitLength(30)}",
           StackTrace.current);
@@ -461,9 +455,13 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   }
 
   void debugLog(String functionName, StackTrace stackTrace) {
-    Log.form(
-        widget.runtimeType.toString().split("FormField").first, functionName, 1,
-        fieldName: widget.decoration?.label ?? widget.decoration?.hint ?? "");
+    if (kLoggingEnabled) {
+      final fieldType = widget.runtimeType.toString().split("FormField").first;
+      final fieldName =
+          widget.decoration?.label ?? widget.decoration?.hint ?? "";
+
+      Log.form(fieldType, functionName, 1, fieldName: fieldName);
+    }
   }
 }
 

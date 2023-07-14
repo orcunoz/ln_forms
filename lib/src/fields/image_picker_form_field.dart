@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
-import 'package:ln_forms/src/utils/logger.dart';
 import 'package:universal_io/io.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ln_forms/ln_forms.dart';
@@ -64,6 +63,9 @@ class ImagePickerFormFieldState extends InputFormFieldState<String>
   @override
   ImagePickerFormField get widget => super.widget as ImagePickerFormField;
 
+  String? _lastSavedImageUrl;
+  Uint8List? _decodedImage;
+
   @override
   InputDecoration get effectiveDecoration => super.effectiveDecoration.copyWith(
         floatingLabelBehavior: FloatingLabelBehavior.always,
@@ -79,9 +81,6 @@ class ImagePickerFormFieldState extends InputFormFieldState<String>
 
     return null;
   }
-
-  String? _lastSavedImageUrl;
-  Uint8List? _decodedImage;
 
   Widget buildImageWidget(BuildContext context, String imageUrl) {
     ImageProvider<Object> imageProvider;

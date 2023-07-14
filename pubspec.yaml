@@ -1,5 +1,5 @@
 name: ln_forms
-description: A starting point for Dart libraries or applications.
+description: Ln form and form fields
 version: 1.0.0
 repository: https://github.com/orcunoz/ln_forms
 publish_to: none
@@ -7,20 +7,20 @@ publish_to: none
 environment:
   sdk: ^3.0.5
 
-# Add regular dependencies here.
 dependencies:
   flutter:
     sdk: flutter
   intl: ^0.18.0
-  universal_platform:
-  universal_io:
+  universal_platform: ^1.0.0+1
+  universal_io: ^2.2.2
   quill_html_editor: ^2.1.9
-  flutter_html:
-  mask_text_input_formatter:
-  url_launcher:
-  image_picker:
+  flutter_html: ^3.0.0-beta.2
+  mask_text_input_formatter: ^2.4.0
+  url_launcher: ^6.1.11
+  image_picker: ^1.0.0
   image_picker_windows:
   logger:
+
   ln_core:
     git:
       url: https://github.com/orcunoz/ln_core

@@ -215,6 +215,7 @@ class _DropdownMenuState<T> extends State<_DropdownMenu<T>> {
   }
 
   Color get _backgroundColor =>
+      widget.route.backgroundColor ??
       Theme.of(context).popupMenuTheme.color ??
       Theme.of(context).colorScheme.background;
 
@@ -311,12 +312,23 @@ class _DropdownMenuState<T> extends State<_DropdownMenu<T>> {
         children: [
           SizedBox(
             height: kMinInteractiveDimension,
-            child: Material(child: _buildSearchBar(context)),
+            child: Material(
+              child: _buildSearchBar(context),
+              type: MaterialType.transparency,
+            ),
           ),
           Flexible(child: child),
         ],
       );
     }
+
+    child = Semantics(
+      scopesRoute: true,
+      namesRoute: true,
+      explicitChildNodes: true,
+      label: localizations.popupMenuLabel,
+      child: child,
+    );
 
     return FadeTransition(
       opacity: _fadeOpacity,
@@ -332,32 +344,27 @@ class _DropdownMenuState<T> extends State<_DropdownMenu<T>> {
             getSelectedItemOffset: () =>
                 widget.route.getItemOffset(widget.route.selectedIndex ?? 0),
           ),
-          child: ClipRRect(
-            clipBehavior: Clip.antiAlias,
-            borderRadius: _borderRadius,
-            child: Material(
-              color: Colors.transparent,
-              type: MaterialType.transparency,
-              textStyle: widget.route.style,
-              clipBehavior: Clip.antiAliasWithSaveLayer,
-              shape: RoundedRectangleBorder(
+          child: widget.route.menuWrapperBuilder?.call(child) ??
+              ClipRRect(
+                clipBehavior: Clip.antiAlias,
                 borderRadius: _borderRadius,
-                side: theme.brightness == Brightness.light
-                    ? BorderSide.none
-                    : BorderSide(
-                        width: .5,
-                        color: theme.dividerColor,
-                      ),
+                child: Material(
+                  color: Colors.transparent,
+                  type: MaterialType.transparency,
+                  textStyle: widget.route.style,
+                  clipBehavior: Clip.antiAliasWithSaveLayer,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: _borderRadius,
+                    side: theme.brightness == Brightness.light
+                        ? BorderSide.none
+                        : BorderSide(
+                            width: .5,
+                            color: theme.dividerColor,
+                          ),
+                  ),
+                  child: child,
+                ),
               ),
-              child: Semantics(
-                scopesRoute: true,
-                namesRoute: true,
-                explicitChildNodes: true,
-                label: localizations.popupMenuLabel,
-                child: child,
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -458,6 +465,8 @@ class _DropdownRoute<T> extends PopupRoute<T> {
     required this.searchable,
     this.lnFormState,
     required this.dropdownPosition,
+    this.menuWrapperBuilder,
+    this.backgroundColor,
   }) : itemHeights = List<double?>.filled(items.length, itemHeight);
 
   final List<_MenuItem<T>> items;
@@ -479,6 +488,8 @@ class _DropdownRoute<T> extends PopupRoute<T> {
 
   final List<double?> itemHeights;
   final ScrollController scrollController = ScrollController();
+  final Color? backgroundColor;
+  final Widget Function(Widget child)? menuWrapperBuilder;
 
   _MenuLimits? _menuLimits;
   _MenuLimits get menuLimits =>
@@ -849,12 +860,10 @@ class DropdownButton<T> extends StatefulWidget {
     this.onTap,
     this.elevation = 2,
     this.style,
-    this.isExpanded = false,
     this.enabled = true,
     this.focusColor,
     this.focusNode,
     this.autofocus = false,
-    this.dropdownColor,
     this.menuMaxHeight,
     this.enableFeedback,
     this.alignment = AlignmentDirectional.center,
@@ -865,15 +874,14 @@ class DropdownButton<T> extends StatefulWidget {
     required this.focusedBorder,
     this.dropdownPosition,
     this.buttonRenderBox,
-  }) : assert(items == null ||
-            items.isEmpty ||
+  }) : assert(items.isEmpty ||
             value == null ||
             items.where((T item) {
                   return item == value;
                 }).length ==
                 1);
 
-  final List<T>? items;
+  final List<T> items;
   final T? value;
   final String? hintText;
   final ValueChanged<T?>? onChanged;
@@ -881,12 +889,10 @@ class DropdownButton<T> extends StatefulWidget {
   final String Function(T?) itemLabelBuilder;
   final int elevation;
   final TextStyle? style;
-  final bool isExpanded;
   final bool enabled;
   final Color? focusColor;
   final FocusNode? focusNode;
   final bool autofocus;
-  final Color? dropdownColor;
   final double? menuMaxHeight;
   final bool? enableFeedback;
   final AlignmentGeometry alignment;
@@ -921,12 +927,6 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
     );
   }
 
-  bool get _enabled =>
-      widget.enabled &&
-      widget.items != null &&
-      widget.items!.isNotEmpty &&
-      widget.onChanged != null;
-
   //double? _currentHeight;
 
   // Only used if needed to create _internalNode.
@@ -935,9 +935,9 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
   }
 
   int? get selectedIndex {
-    if (widget.value == null || widget.items == null) return null;
+    if (widget.value == null) return null;
 
-    var index = widget.items!.indexOf(widget.value as T);
+    var index = widget.items.indexOf(widget.value as T);
     return index == -1 ? null : index;
   }
 
@@ -1002,28 +1002,42 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
     }
   }
 
-  Rect get itemRect {
+  Rect get itemRect => _calculateItemRect(
+      context: context,
+      buttonRenderBox: widget.buttonRenderBox,
+      itemPadding: effectiveItemPadding,
+      focusedBorder: widget.focusedBorder);
+
+  static Rect _calculateItemRect({
+    required BuildContext context,
+    RenderBox? buttonRenderBox,
+    required EdgeInsets itemPadding,
+    InputBorder? focusedBorder,
+  }) {
     final renderBox =
-        widget.buttonRenderBox ?? context.findRenderObject()! as RenderBox;
-    final insets =
-        widget.buttonRenderBox == null ? effectiveItemPadding : EdgeInsets.zero;
+        buttonRenderBox ?? context.findRenderObject()! as RenderBox;
+    final insets = buttonRenderBox == null ? itemPadding : EdgeInsets.zero;
     final ancestor =
         Navigator.of(context, rootNavigator: true).context.findRenderObject();
-    return _calculateRect(renderBox, insets, ancestor);
+    return _calculateRect(renderBox, insets, ancestor, focusedBorder);
   }
 
-  Rect _calculateRect(
-      RenderBox itemBox, EdgeInsets insets, RenderObject? ancestor) {
+  static Rect _calculateRect(
+    RenderBox itemBox,
+    EdgeInsets insets,
+    RenderObject? ancestor,
+    InputBorder? focusedBorder,
+  ) {
     return itemBox.localToGlobal(
-            Offset(-insets.left, widget.focusedBorder?.borderSide.width ?? 0),
+            Offset(-insets.left, focusedBorder?.borderSide.width ?? 0),
             ancestor: ancestor) &
         Size(itemBox.size.width + insets.left + insets.right,
             itemBox.size.height);
   }
 
   Future<T?> showMenu() async {
-    if (!_enabled) Future<T?>.value(null);
-    final items = widget.items ?? [];
+    if (widget.items.isEmpty) Future<T?>.value(null);
+    final items = widget.items;
 
     final theme = Theme.of(context);
     final highlightColor = widget.focusColor ??
@@ -1124,6 +1138,135 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
     return newValue!.$1;
   }
 
+  static Future<T?> showMenuFor<T>({
+    required BuildContext context,
+    required List<T> items,
+    T? value,
+    ValueChanged<T?>? onChanged,
+    required String Function(T?) itemLabelBuilder,
+    int elevation = 2,
+    TextStyle? style,
+    Color? focusColor,
+    Color? highlightColor,
+    double? menuMaxHeight,
+    bool? enableFeedback,
+    AlignmentGeometry alignment = Alignment.centerLeft,
+    BorderRadius? borderRadius,
+    double? fixedWidth,
+    bool? searchable,
+    EdgeInsets? itemPadding = const EdgeInsets.all(12),
+    InputBorder? selectedBorder,
+    DropdownPosition dropdownPosition = DropdownPosition.under,
+    RenderBox? buttonRenderBox,
+    Widget Function(Widget child)? menuWrapperBuilder,
+    Color? backgroundColor,
+  }) async {
+    if (items.isEmpty) Future<T?>.value(null);
+
+    final theme = Theme.of(context);
+    _DropdownRoute? dropdownRoute;
+    searchable = searchable ?? items.length > 10;
+    focusColor = focusColor ?? theme.focusColor;
+    highlightColor = highlightColor ?? theme.highlightColor;
+
+    _MenuItem<(T,)?> buildMenuItem(int itemIndex) {
+      final item = items[itemIndex];
+      final label = itemLabelBuilder(item);
+
+      return _MenuItem<(T,)?>(
+        builder: (searchText) {
+          final isSelected = item == value;
+          final decoration = isSelected
+              ? BoxDecoration(
+                  color: highlightColor,
+                  border: Border.symmetric(
+                    horizontal: selectedBorder?.borderSide ?? BorderSide.none,
+                  ),
+                )
+              : null;
+
+          return Container(
+            padding: itemPadding,
+            alignment: alignment,
+            decoration: decoration,
+            constraints:
+                const BoxConstraints(minHeight: kMinInteractiveDimension),
+            child: HighlightedText(
+              label,
+              highlightedText: searchText,
+              //style: _effectiveTextStyle,
+            ),
+          );
+        },
+        label: label,
+        value: (item,),
+        onLayout: (Size size) =>
+            dropdownRoute!.itemHeights[itemIndex] = size.height,
+      );
+    }
+
+    final List<_MenuItem<(T,)?>> menuItems = [
+      for (var i = 0; i < items.length; i++) buildMenuItem(i)
+    ];
+
+    final itemRect = _calculateItemRect(
+      context: context,
+      buttonRenderBox: buttonRenderBox,
+      itemPadding: itemPadding ?? EdgeInsets.zero,
+      focusedBorder: selectedBorder,
+    );
+    final buttonRect = EdgeInsets.zero.inflateRect(itemRect);
+    final mediaQuery = MediaQuery.of(context);
+    final safePadding = mediaQuery.padding.copyWith(
+        bottom:
+            math.max(mediaQuery.padding.bottom, mediaQuery.viewInsets.bottom));
+    final menuMargin = _defaultMenuMargin +
+        safePadding +
+        const EdgeInsets.only(top: kToolbarHeight);
+
+    final availableHeight = mediaQuery.size.height - menuMargin.vertical;
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    int? selectedIndex;
+    if (value != null) {
+      var index = items.indexOf(value);
+      selectedIndex = index == -1 ? null : index;
+    }
+
+    dropdownRoute = _DropdownRoute<(T,)?>(
+        items: menuItems,
+        buttonRect: buttonRect,
+        selectedIndex: selectedIndex,
+        elevation: elevation,
+        capturedThemes:
+            InheritedTheme.capture(from: context, to: navigator.context),
+        style: theme.defaultFormFieldStyle, // _effectiveTextStyle!,
+        barrierLabel:
+            MaterialLocalizations.of(context).modalBarrierDismissLabel,
+        enableFeedback: enableFeedback ?? true,
+        borderRadius: borderRadius,
+        menuMargin: menuMargin,
+        menuHeightLimit: menuMaxHeight,
+        availableHeight: availableHeight,
+        fixedWidth: fixedWidth ?? buttonRect.width,
+        searchable: searchable,
+        lnFormState: LnFormFocusTarget.of(context),
+        dropdownPosition: DropdownPosition.under,
+        menuWrapperBuilder: menuWrapperBuilder,
+        backgroundColor: backgroundColor);
+
+    final newValue = await navigator.push(dropdownRoute);
+
+    dropdownRoute._dismiss();
+    dropdownRoute = null;
+    if (newValue != null) {
+      onChanged?.call(newValue.$1);
+    }
+
+    return newValue.$1;
+  }
+
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMaterial(context));
@@ -1160,11 +1303,11 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
         child: InkWell(
           mouseCursor: MouseCursor.defer,
           onTap: showMenu,
-          canRequestFocus: _enabled,
+          canRequestFocus: widget.enabled && widget.items.isNotEmpty,
           borderRadius: widget.borderRadius,
           focusNode: focusNode,
           autofocus: widget.autofocus,
-          enableFeedback: false,
+          enableFeedback: widget.enableFeedback,
           child: child,
         ),
       ),
