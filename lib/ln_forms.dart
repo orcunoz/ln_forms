@@ -29,4 +29,4 @@ export 'src/locales/validator_localizations.dart';
 
 export 'src/utilities/validator.dart';
 
-const kLoggingEnabled = true;
+const kLoggingEnabled = false;

@@ -84,7 +84,7 @@ class _HtmlEditorFormFieldState extends InputFormFieldState<String>
 
     final contentHeight =
         screenHeight - topBarHeight - bottomBarHeight - 2 * kToolbarHeight;
-    ;
+
     await BackdropDialog.show(
       context: context,
       barrierColor: Colors.transparent,

@@ -874,12 +874,7 @@ class DropdownButton<T> extends StatefulWidget {
     required this.focusedBorder,
     this.dropdownPosition,
     this.buttonRenderBox,
-  }) : assert(items.isEmpty ||
-            value == null ||
-            items.where((T item) {
-                  return item == value;
-                }).length ==
-                1);
+  });
 
   final List<T> items;
   final T? value;

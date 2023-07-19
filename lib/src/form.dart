@@ -31,16 +31,13 @@ class LnForm<FormD extends Copyable<FormD>, SubmitResultD>
   final Object? error;
   final bool loading;
   final Future<SubmitResultD?> Function(FormD data)? submitAction;
+
+  /// Available modes for form.
+  ///
+  /// First mode will be initial for this form
   final List<FormMode> modes;
-  final FormMode initialMode;
   final ButtonsLocation buttonsLocation;
   final String? title;
-
-  /// Set null if you want to disable auto cleaner feature on succeed
-  final Duration? successResultAutoCleanerDuration;
-
-  /// Set null if you want to disable auto cleaner feature on failed
-  final Duration? errorResultAutoCleanerDuration;
 
   final bool resetOnSuccess;
   final bool saveOnSuccess;
@@ -49,9 +46,6 @@ class LnForm<FormD extends Copyable<FormD>, SubmitResultD>
   final IconData submitButtonIcon;
   final String? editButtonText;
   final IconData editButtonIcon;
-  final String? cancelEditingButtonText;
-  final IconData cancelEditingButtonIcon;
-  final Function()? onClickCancelEditing;
 
   final List<LnFormActionButton> actionButtons;
 
@@ -60,6 +54,8 @@ class LnForm<FormD extends Copyable<FormD>, SubmitResultD>
   final EdgeInsets padding;
   final EdgeInsets margin;
   final bool card;
+  final bool manageSuccessAlerts;
+  final bool manageErrorAlerts;
 
   const LnForm({
     super.key,
@@ -69,11 +65,8 @@ class LnForm<FormD extends Copyable<FormD>, SubmitResultD>
     this.error,
     this.submitAction,
     this.modes = const [FormMode.view, FormMode.edit],
-    this.initialMode = FormMode.view,
     this.buttonsLocation = ButtonsLocation.afterFields,
     this.title,
-    this.successResultAutoCleanerDuration = const Duration(seconds: 5),
-    this.errorResultAutoCleanerDuration = const Duration(seconds: 5),
     this.resetOnSuccess = true,
     this.saveOnSuccess = false,
     this.resetOnError = false,
@@ -81,15 +74,14 @@ class LnForm<FormD extends Copyable<FormD>, SubmitResultD>
     this.submitButtonIcon = Icons.save_outlined,
     this.editButtonText,
     this.editButtonIcon = Icons.edit_note_rounded,
-    this.cancelEditingButtonText,
-    this.cancelEditingButtonIcon = Icons.arrow_back_rounded,
-    this.onClickCancelEditing,
     this.actionButtons = const [],
     this.scrollable = true,
     this.useSafeAreaForBottom = true,
     this.padding = formPadding,
     this.margin = formMargin,
     this.card = true,
+    this.manageSuccessAlerts = true,
+    this.manageErrorAlerts = true,
   }) : assert(modes.length > 0);
 
   @override
@@ -193,9 +185,7 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
   void resetForm() {
     _data = _savedInitialData?.copy();
     _formKey.currentState?.reset();
-    _editMode = widget.modes.contains(FormMode.edit) &&
-        (widget.initialMode == FormMode.edit ||
-            !widget.modes.contains(FormMode.view));
+    _editMode = widget.modes.first == FormMode.edit;
   }
 
   void _changeMode(FormMode mode) {
@@ -415,19 +405,6 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
     ];
   }
 
-  _setCleanerForResultState(final dynamic result, Duration duration) async {
-    await Future.delayed(const Duration(seconds: 5));
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (result == _submitActionResult) {
-        _submitActionResult = null;
-      }
-      if (result == _submitActionError) {
-        _submitActionError = null;
-      }
-      _rebuild();
-    });
-  }
-
   Widget _buildForm() {
     /*final results = _buildResults(
         context, _data, widget.error, _submitActionResult, _submitActionError);*/
@@ -500,8 +477,16 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
     _rebuild();
 
     try {
-      final submitResult =
-          await widget.submitAction!(_data!).manageAlerts(context);
+      var future = widget.submitAction!(_data!);
+      if (widget.manageSuccessAlerts && widget.manageErrorAlerts) {
+        future = future.manageAlerts(context);
+      } else if (widget.manageSuccessAlerts) {
+        future = future.manageSuccessAlerts(context);
+      } else if (widget.manageErrorAlerts) {
+        future = future.manageErrorAlerts(context);
+      }
+
+      final submitResult = await future;
 
       if (widget.modes.contains(FormMode.view)) {
         _changeMode(FormMode.view);
@@ -511,20 +496,12 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
         _formKey.currentState!.save();
       }
 
-      if (widget.successResultAutoCleanerDuration != null) {
-        _setCleanerForResultState(
-            submitResult, widget.successResultAutoCleanerDuration!);
-      }
       if (widget.resetOnSuccess) resetForm();
       _submitActionResult = submitResult;
     } catch (error, stackTrace) {
       Log.e(error, stackTrace: stackTrace);
       _submitActionError = error;
 
-      if (widget.errorResultAutoCleanerDuration != null) {
-        _setCleanerForResultState(
-            error, widget.errorResultAutoCleanerDuration!);
-      }
       if (widget.resetOnError) resetForm();
     } finally {
       _loadingSubmitAction = false;

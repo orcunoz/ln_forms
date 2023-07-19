@@ -24,7 +24,7 @@ class LnFormActionButton {
     this.icon,
     this.tooltip,
     this.onPressed,
-    required this.enabledModes,
+    this.enabledModes = FormMode.values,
   })  : assert(text != null || icon != null),
         type = null;
 
