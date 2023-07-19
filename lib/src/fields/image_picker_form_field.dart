@@ -16,7 +16,7 @@ class ImagePickerFormField extends InputFormField<String> {
     super.onChanged,
     super.onSaved,
     super.focusNode,
-    super.validate,
+    super.validator,
     super.readOnly,
     super.enabled,
     super.decoration,

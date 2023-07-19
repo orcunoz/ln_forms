@@ -16,7 +16,7 @@ class CheckboxFormField extends InputFormField<bool?> {
     super.readOnly,
     super.enabled,
     super.focusNode,
-    super.validate,
+    super.validator,
     super.style,
     this.tristate = false,
     this.suffixIcon,

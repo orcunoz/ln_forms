@@ -22,7 +22,7 @@ class MultiSelectFormField<ItemType> extends InputFormField<List<ItemType>> {
     required this.items,
     required this.itemLabelBuilder,
     this.labelBuilder,
-    super.validate,
+    super.validator,
     super.clearable,
     super.restoreable,
     super.style,

@@ -17,7 +17,7 @@ class PhoneNumberInputFormField extends TextInputFormField {
     super.onSaved,
     super.autofocus = false,
     super.textInputAction,
-    super.validate,
+    super.validator,
     super.clearable,
     String? initialValue,
     super.style,

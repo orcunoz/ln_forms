@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart' hide DropdownButton;
 import 'package:ln_forms/ln_forms.dart';
-import 'package:ln_forms/src/widgets/dropdown_button.dart';
 import 'package:ln_core/ln_core.dart';
 
 class DropdownFormField<ItemType> extends InputFormField<ItemType> {
@@ -15,7 +14,7 @@ class DropdownFormField<ItemType> extends InputFormField<ItemType> {
     super.initialValue,
     super.onChanged,
     super.onSaved,
-    super.validate,
+    super.validator,
     super.readOnly,
     super.enabled,
     super.clearable,

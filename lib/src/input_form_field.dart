@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ln_forms/src/utils/logger.dart';
+import 'package:ln_forms/ln_forms.dart';
+import 'package:ln_forms/src/utilities/logger.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:ln_core/ln_core.dart';
 
-import 'ln_forms_base.dart';
+import 'widgets/empty_readonly_placeholder.dart';
 
 class InputFormField<T> extends FormField<T> {
   final TextStyle? style;
@@ -29,7 +30,7 @@ class InputFormField<T> extends FormField<T> {
     this.autofocus = false,
     bool? enabled,
     this.readOnly = false,
-    String? Function(T?)? validate,
+    super.validator,
     this.clearable,
     this.restoreable,
     this.style,
@@ -40,14 +41,13 @@ class InputFormField<T> extends FormField<T> {
     this.unfocusWhenTapOutside = false,
   }) : super(
           autovalidateMode: AutovalidateMode.always,
-          validator: (val) => validate?.call(val),
           enabled: enabled ?? /*decoration?.enabled ??*/ true,
           builder: (FormFieldState<T> field) {
             final InputFormFieldState<T> state =
                 field as InputFormFieldState<T>;
 
             Widget child = state.isEmpty && readOnly
-                ? EmptyReadOnlyStatePlaceholder(
+                ? EmptyReadOnlyPlaceholder(
                     color: Theme.of(state.context).hintColor,
                   )
                 : builder(state) ?? const SizedBox();
@@ -142,12 +142,8 @@ class InputFormField<T> extends FormField<T> {
   InputFormFieldState<T> createState() => InputFormFieldState<T>();
 }
 
-bool _isEmpty(dynamic value) =>
-    value == null ||
-    (value is String && value.isEmpty) ||
-    (value is Iterable && value.isEmpty);
-
 class InputFormFieldState<T> extends FormFieldState<T> {
+  // ignore: unused_field
   int _generation = 0;
 
   T? _stateInitialValue;
@@ -162,7 +158,7 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
   bool get isFocused => isActive && effectiveFocusNode.hasFocus;
 
-  bool get isEmpty => _isEmpty(value);
+  bool get isEmpty => Validator.isEmptyValue(value);
 
   @override
   bool get hasError => errorText?.isNotEmpty == true;
@@ -182,10 +178,10 @@ class InputFormFieldState<T> extends FormFieldState<T> {
           FocusNode(skipTraversal: true, canRequestFocus: true);
 
   bool get effectiveRestorable =>
-      widget.restoreable ?? !_isEmpty(widget.initialValue);
+      widget.restoreable ?? !Validator.isEmptyValue(widget.initialValue);
 
   bool get effectiveClearable =>
-      widget.clearable ?? _isEmpty(widget.initialValue);
+      widget.clearable ?? Validator.isEmptyValue(widget.initialValue);
 
   Widget? get editingActionButton {
     if (isActive && UniversalPlatform.isDesktopOrWeb ? isHovering : isFocused) {
@@ -194,14 +190,14 @@ class InputFormFieldState<T> extends FormFieldState<T> {
           icon: const Icon(Icons.settings_backup_restore_rounded),
           focusNode: editingActionButtonFocusNode,
           onPressed: () => didChange(_stateInitialValue),
-          //tooltip: S.of(context).restore,
+          //tooltip: S.current.restore,
         );
       } else if (effectiveClearable && !isEmpty) {
         return IconButton(
           icon: const Icon(Icons.clear_rounded),
           focusNode: editingActionButtonFocusNode,
           onPressed: () => didChange(null),
-          //tooltip: S.of(context).clear,
+          //tooltip: S.current.clear,
         );
       }
     }
@@ -214,10 +210,8 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   LnDecoration get baseDecoration => const LnDecoration();
 
   InputDecoration? _effectiveDecoration;
-  InputDecoration get effectiveDecoration {
-    assert(_effectiveDecoration != null);
-    return _effectiveDecoration!;
-  }
+  InputDecoration get effectiveDecoration =>
+      _effectiveDecoration ??= _prepareDecorationForBuild();
 
   InputDecoration _prepareDecorationForBuild() {
     LnDecoration decorationBase = (widget.decoration ?? const LnDecoration())
@@ -225,11 +219,11 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
     if (widget.readOnly) {
       decorationBase = decorationBase.apply(
-        hint: const Wrapped.value(null),
-        counter: const Wrapped.value(null),
-        suffixIcon: const Wrapped.value(null),
-        error: const Wrapped.value(null),
-        helper: const Wrapped.value(null),
+        hint: Wrapped(null),
+        counter: Wrapped(null),
+        suffixIcon: Wrapped(null),
+        error: Wrapped(null),
+        helper: Wrapped(null),
       );
     }
 
@@ -298,7 +292,7 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
   @override
   void initState() {
-    debugLog("initState", StackTrace.current);
+    log("initState", StackTrace.current);
     super.initState();
 
     _stateInitialValue = widget.initialValue;
@@ -316,7 +310,7 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
   @override
   void didUpdateWidget(InputFormField<T> oldWidget) {
-    debugLog("didUpdateWidget", StackTrace.current);
+    log("didUpdateWidget", StackTrace.current);
     super.didUpdateWidget(oldWidget);
     if (widget.focusNode != oldWidget.focusNode) {
       //unsyncFocusNode(oldWidget.focusNode);
@@ -335,11 +329,11 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
   @override
   void didChangeDependencies() {
-    debugLog("didChangeDependencies", StackTrace.current);
+    log("didChangeDependencies", StackTrace.current);
     super.didChangeDependencies();
 
     if (widget.initialValue != _stateInitialValue) {
-      debugLog(
+      log(
           "didChangeDependencies -> initialValueChanged: "
           "${widget.initialValue?.toString().limitLength(30)}->"
           "${_stateInitialValue?.toString().limitLength(30)}",
@@ -349,7 +343,7 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
   @override
   void dispose() {
-    debugLog("dispose", StackTrace.current);
+    log("dispose", StackTrace.current);
     _internalNode?.dispose();
     _editingActionButtonFocusNode?.dispose();
     super.dispose();
@@ -362,15 +356,15 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   @override
   void didChange(T? value) {
     if (this.value != value) {
-      debugLog("didChange: $value", StackTrace.current);
-      if (widget.onChanged != null) widget.onChanged!(value);
+      log("didChange: $value", StackTrace.current);
       super.didChange(value);
+      if (widget.onChanged != null) widget.onChanged!(value);
     }
   }
 
   @mustCallSuper
   void handleFocusChanged(bool hasFocus) {
-    debugLog("handler -> focusChange: $hasFocus", StackTrace.current);
+    log("handler -> focusChange: $hasFocus", StackTrace.current);
 
     if (hasFocus) {
       _focusedBefore = true;
@@ -385,8 +379,7 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   @mustCallSuper
   KeyEventResult handleKeyEvent(KeyEvent event) {
     assert(effectiveFocusNode.hasFocus);
-    debugLog(
-        "handler -> onKeyEvent(${event.runtimeType}): ${event.logicalKey.keyLabel}",
+    log("handler -> onKeyEvent(${event.runtimeType}): ${event.logicalKey.keyLabel}",
         StackTrace.current);
 
     if (event is KeyDownEvent &&
@@ -400,13 +393,13 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   @mustCallSuper
   void handleTap() {
     assert(isActive);
-    debugLog("handler -> tap", StackTrace.current);
+    log("handler -> tap", StackTrace.current);
   }
 
   @mustCallSuper
   void handleTapOutside() {
     assert(isActive && effectiveFocusNode.hasFocus);
-    debugLog("handler -> tapOutside", StackTrace.current);
+    log("handler -> tapOutside", StackTrace.current);
     if (widget.unfocusWhenTapOutside) {
       effectiveFocusNode.unfocus();
     }
@@ -416,7 +409,7 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   void handleHover(bool hovering) {
     assert(isActive || (_isHovering && !hovering));
     if (hovering == _isHovering) return;
-    debugLog("handler -> hover: $hovering", StackTrace.current);
+    log("handler -> hover: $hovering", StackTrace.current);
 
     _isHovering = hovering;
     rebuild();
@@ -425,14 +418,14 @@ class InputFormFieldState<T> extends FormFieldState<T> {
   @mustCallSuper
   @override
   bool validate() {
-    debugLog("validate", StackTrace.current);
+    log("validate", StackTrace.current);
     _isPassed = true;
     return super.validate();
   }
 
   @override
   void reset() {
-    debugLog("reset: $value => $_stateInitialValue", StackTrace.current);
+    log("reset: $value => $_stateInitialValue", StackTrace.current);
     _isPassed = false;
     _focusedBefore = false;
     super.reset();
@@ -442,102 +435,24 @@ class InputFormFieldState<T> extends FormFieldState<T> {
 
   @override
   void save() {
-    debugLog("save: $_stateInitialValue => $value", StackTrace.current);
+    log("save: $_stateInitialValue => $value", StackTrace.current);
     _stateInitialValue = value;
     super.save();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    //effectiveFocusNode.canRequestFocus = isActive;
-    _effectiveDecoration = _prepareDecorationForBuild();
-    return super.build(context);
-  }
-
-  void debugLog(String functionName, StackTrace stackTrace) {
+  void log(String functionName, StackTrace stackTrace) {
     if (kLoggingEnabled) {
       final fieldType = widget.runtimeType.toString().split("FormField").first;
       final fieldName =
           widget.decoration?.label ?? widget.decoration?.hint ?? "";
 
-      Log.form(fieldType, functionName, 1, fieldName: fieldName);
+      FormLog.d(fieldType, functionName, 1, fieldName: fieldName);
     }
   }
-}
-
-class EmptyReadOnlyStatePlaceholder extends Align {
-  EmptyReadOnlyStatePlaceholder({
-    super.key,
-    Color? color,
-  }) : super(
-          alignment: Alignment.centerLeft,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints.tightFor(width: 24, height: 1.5),
-            child: Divider(
-              height: 1.5,
-              thickness: 1.5,
-              color: color,
-            ),
-          ),
-        );
-}
-
-mixin FutureFormField<T> on InputFormFieldState<T> {
-  Future<T?>? future;
 
   @override
-  bool get isFocused => super.isFocused || future != null;
-
-  @override
-  MouseCursor get effectiveMouseCursor =>
-      MaterialStateProperty.resolveAs<MouseCursor>(
-        MaterialStateMouseCursor.clickable,
-        <MaterialState>{
-          if (widget.readOnly) MaterialState.disabled,
-          if (!widget.enabled) MaterialState.disabled,
-        },
-      );
-
-  @override
-  KeyEventResult handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.enter &&
-        future == null) {
-      invoke();
-      return KeyEventResult.handled;
-    }
-    return super.handleKeyEvent(event);
-  }
-
-  @override
-  void handleTap() {
-    super.handleTap();
-
-    if (!effectiveFocusNode.hasFocus) {
-      effectiveFocusNode.requestFocus();
-    }
-
-    invoke();
-  }
-
-  Future<T?> invoke() async {
-    future = toFuture();
-    final result = await future;
-
-    //effectiveFocusNode.requestFocus();
-    rebuild();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      future = null;
-      if (result != null) {
-        didChange(result);
-      }
-    });
-
-    return result;
-  }
-
-  Future<T?> toFuture() {
-    throw Exception("You have to override this method!");
+  Widget build(BuildContext context) {
+    _effectiveDecoration = null;
+    return super.build(context);
   }
 }

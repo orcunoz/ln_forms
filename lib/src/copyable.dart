@@ -1,11 +1,11 @@
 import 'package:flutter/widgets.dart';
 
-abstract class Copyable<T> {
+mixin Copyable<T> {
   @required
   T copy();
 }
 
-class VoidCopyable implements Copyable<VoidCopyable> {
+final class VoidCopyable with Copyable<VoidCopyable> {
   @override
   VoidCopyable copy() => this;
 }

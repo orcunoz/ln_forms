@@ -20,7 +20,7 @@ class SelectionFormField<ItemType> extends InputFormField<ItemType> {
     required super.initialValue,
     super.onChanged,
     super.onSaved,
-    super.validate,
+    super.validator,
     super.readOnly,
     super.enabled,
     super.clearable,

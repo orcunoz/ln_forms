@@ -26,7 +26,7 @@ class TextInputFormField extends InputFormField<String> {
     super.onChanged,
     super.onSaved,
     super.autofocus,
-    super.validate,
+    super.validator,
     super.clearable,
     super.restoreable,
     super.style,

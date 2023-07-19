@@ -1282,7 +1282,7 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
     Widget child;
 
     final T? selectedItem =
-        selectedIndex != null ? widget.items![selectedIndex!] : null;
+        selectedIndex != null ? widget.items[selectedIndex!] : null;
 
     if (selectedItem == null) {
       child = DefaultTextStyle(

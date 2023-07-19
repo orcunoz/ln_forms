@@ -29,6 +29,8 @@ dependencies:
     git:
       url: https://github.com/orcunoz/ln_dialogs
       ref: main
+  ln_alerts:
+    path: ../alerts
 
 flutter:
   uses-material-design: true

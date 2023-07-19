@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
+import 'package:ln_forms/src/locales/form_localizations.dart';
 
 enum LetterCase { normal, small, capital }
 
@@ -28,7 +29,7 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
     super.restoreable,
     List<String> textSeparators = const [' ', ','],
     this.letterCase = LetterCase.normal,
-    String? Function(String?)? validate,
+    String? Function(String?)? validator,
     this.validateItem,
     this.minContentHeight = 0,
     this.inputFormatter,
@@ -44,13 +45,13 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
           initialValue: _autoSplit(initialValue, separator),
           useFocusNode: false,
           absorbInsideTapEvents: false,
-          decoration: decoration?.apply(prefixText: const Wrapped.value(null)),
+          decoration: decoration?.apply(prefixText: const Wrapped(null)),
           onChanged: onChanged == null
               ? null
-              : (val) {
-                  onChanged(_autoJoin(val, separator));
-                },
-          validate: (val) => validate?.call(_autoJoin(val, separator)),
+              : (val) => onChanged(_autoJoin(val, separator)),
+          validator: validator == null
+              ? null
+              : (val) => validator(_autoJoin(val, separator)),
           builder: (FormFieldState<List<String>> field) =>
               (field as MultipleTextInputFormFieldState)._buildInside(),
         );
@@ -65,7 +66,7 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
     super.focusNode,
     super.clearable,
     super.restoreable,
-    super.validate,
+    super.validator,
     this.validateItem,
     this.textSeparators = const [' ', ','],
     this.letterCase = LetterCase.normal,
@@ -79,7 +80,7 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
         super(
           useFocusNode: false,
           absorbInsideTapEvents: false,
-          decoration: decoration?.apply(prefixText: const Wrapped.value(null)),
+          decoration: decoration?.apply(prefixText: const Wrapped(null)),
           builder: (FormFieldState<List<String>> field) =>
               (field as MultipleTextInputFormFieldState)._buildInside(),
         );
@@ -198,7 +199,7 @@ class MultipleTextInputFormFieldState
 
   String? _validateItem(String item) {
     if (widget.uniqueItems && value.contains(item) == true) {
-      return "Bunu daha önceden eklediniz."; // TODO: You have already added this
+      return formLocalizations.current.youHaveAlreadyAddedThis;
     }
 
     String? errorMessage = widget.validateItem?.call(item);
