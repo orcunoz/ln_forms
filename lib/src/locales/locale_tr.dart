@@ -1,8 +1,8 @@
-import 'form_localizations.dart';
-import 'validator_localizations.dart';
+import 'forms_localizations.dart';
+import 'validators_localizations.dart';
 
-class LocaleTr extends FormsLocale {
-  const LocaleTr() : super("tr");
+class FormsLocaleTr extends LnFormsLocalizations {
+  const FormsLocaleTr() : super("tr");
 
   @override
   String get okButton => "Tamam";
@@ -46,8 +46,8 @@ class LocaleTr extends FormsLocale {
   String get restoreChanges => "Değişiklikleri geri almak";
 }
 
-class ValidatorLocaleTr extends ValidatorLocale {
-  const ValidatorLocaleTr() : super("tr");
+class ValidatorsLocaleTr extends LnValidatorsLocalizations {
+  const ValidatorsLocaleTr() : super("tr");
 
   @override
   String get theField => "Bu alan";

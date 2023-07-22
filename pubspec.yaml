@@ -22,20 +22,20 @@ dependencies:
   logger:
 
   ln_core:
-    #path: ../ln_core
-    git:
-      url: https://github.com/orcunoz/ln_core
-      ref: main
+    path: ../ln_core
+    #git:
+    #  url: https://github.com/orcunoz/ln_core
+    #  ref: main
   ln_dialogs:
-    #path: ../ln_dialogs
-    git:
-      url: https://github.com/orcunoz/ln_dialogs
-      ref: main
+    path: ../ln_dialogs
+    #git:
+    #  url: https://github.com/orcunoz/ln_dialogs
+    #  ref: main
   ln_alerts:
-    #path: ../ln_alerts
-    git:
-      url: https://github.com/orcunoz/ln_alerts
-      ref: main
+    path: ../ln_alerts
+    #git:
+    #  url: https://github.com/orcunoz/ln_alerts
+    #  ref: main
 
 flutter:
   uses-material-design: true

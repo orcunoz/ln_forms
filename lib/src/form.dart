@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:ln_alerts/ln_alerts.dart';
+
 import 'package:ln_core/ln_core.dart';
 import 'package:ln_dialogs/ln_dialogs.dart';
 import 'package:ln_forms/ln_forms.dart';
 import 'package:ln_forms/src/utilities/logger.dart';
-import 'locales/form_localizations.dart';
 
 export 'form_action_button.dart';
 
@@ -101,7 +101,7 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
   Object? _submitActionError;
   bool _loadingSubmitAction = false;
 
-  ScrollController? get scrollController => _scrollController;
+  double? _translationY;
 
   final List<FocusNode> _fns = <FocusNode>[];
   List<FocusNode> _getActionButtonFocusNodes(int requiredCount) {
@@ -248,6 +248,61 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
     return results.isEmpty ? null : SpacedColumn(children: results);
   }*/
 
+  void _onClickClearFields() {
+    final ss = LnFormsLocalizations.current;
+    ConfirmationDialog.show(
+      context: context,
+      message: ss.areYouSureYouWantToX(ss.clearX(ss.formFields)).sentenceCase,
+      onSubmit: () {
+        FocusScope.of(context).unfocus();
+
+        resetForm();
+        _scrollController?.animateTo(0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut);
+      },
+    );
+  }
+
+  void _onClickRestoreChanges() {
+    final ss = LnFormsLocalizations.current;
+    ConfirmationDialog.show(
+      context: context,
+      message: ss.areYouSureYouWantToX(ss.restoreChanges).sentenceCase,
+      onSubmit: resetForm,
+    );
+  }
+
+  Widget? _buildBottomAppBar(BuildContext context) {
+    final actionButtons = _buildBottomAppBarActionButtons(
+      context,
+      _editMode ? FormMode.edit : FormMode.view,
+      widget.modes,
+      !widget.loading && !_loadingSubmitAction,
+      _changeMode,
+      _data != null && widget.submitAction != null
+          ? () => _onSubmitPressed(context)
+          : null,
+      widget.submitButtonText,
+      widget.submitButtonIcon,
+      widget.editButtonText,
+      widget.editButtonIcon,
+    );
+
+    return actionButtons.isNotEmpty
+        ? BottomAppBar(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            elevation: .0,
+            clipBehavior: Clip.antiAlias,
+            child: Responsive(
+              alignment: Alignment.topCenter,
+              margin: widget.margin.symetricScale(vertical: 0),
+              child: Row(children: actionButtons),
+            ),
+          )
+        : null;
+  }
+
   List<Widget> _buildActionButtons(
     BuildContext context,
     FormMode formMode,
@@ -262,7 +317,6 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
   ) {
     final focusNodes =
         _getActionButtonFocusNodes(widget.actionButtons.length + 1);
-    final ss = formLocalizations.current;
 
     return <Widget>[
       for (var (index, buttonData) in widget.actionButtons.indexed)
@@ -274,26 +328,8 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
           busy: false,
           focusNode: focusNodes[index + 1],
           onPressed: switch (buttonData.type) {
-            LnFormActionButtonType.clear => () => ConfirmationDialog.show(
-                  context: context,
-                  message: ss
-                      .areYouSureYouWantToX(ss.clearX(ss.formFields))
-                      .sentenceCase,
-                  onSubmit: () {
-                    FocusScope.of(context).unfocus();
-
-                    resetForm();
-                    scrollController?.animateTo(0,
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut);
-                  },
-                ),
-            LnFormActionButtonType.restore => () => ConfirmationDialog.show(
-                  context: context,
-                  message:
-                      ss.areYouSureYouWantToX(ss.restoreChanges).sentenceCase,
-                  onSubmit: resetForm,
-                ),
+            LnFormActionButtonType.clear => _onClickClearFields,
+            LnFormActionButtonType.restore => _onClickRestoreChanges,
             _ => null,
           },
         ),
@@ -304,7 +340,8 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
             onSubmitPressed();
           },
           icon: submitButtonIcon,
-          labelText: submitButtonText ?? formLocalizations.current.saveButton,
+          labelText:
+              submitButtonText ?? LnFormsLocalizations.current.saveButton,
           loading: !enabled,
           focusNode: focusNodes[0],
         ),
@@ -313,7 +350,7 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
         ProgressIndicatorButton(
           onPressed: () => changeMode(FormMode.edit),
           icon: editButtonIcon,
-          labelText: editButtonText ?? formLocalizations.current.editButton,
+          labelText: editButtonText ?? LnFormsLocalizations.current.editButton,
           loading: !enabled,
           focusNode: focusNodes[0],
         ),
@@ -335,7 +372,7 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
   ) {
     final focusNodes =
         _getActionButtonFocusNodes(widget.actionButtons.length + 1);
-    final ss = formLocalizations.current;
+    final ss = LnFormsLocalizations.current;
 
     return <Widget>[
       for (var (index, buttonData) in widget.actionButtons.indexed)
@@ -348,20 +385,7 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
             busy: false,
             focusNode: focusNodes[index + 1],
             onPressed: switch (buttonData.type) {
-              LnFormActionButtonType.clear => () => ConfirmationDialog.show(
-                    context: context,
-                    message: ss
-                        .areYouSureYouWantToX(ss.clearX(ss.formFields))
-                        .sentenceCase,
-                    onSubmit: () {
-                      FocusScope.of(context).unfocus();
-
-                      resetForm();
-                      scrollController?.animateTo(0,
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeInOut);
-                    },
-                  ),
+              LnFormActionButtonType.clear => _onClickClearFields,
               LnFormActionButtonType.restore => () => ConfirmationDialog.show(
                     context: context,
                     message:
@@ -371,15 +395,15 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
               _ => null,
             },
           ),
-      if (formMode == FormMode.edit && onSubmitPressed != null) ...[
-        Expanded(child: SizedBox()),
+      Expanded(child: SizedBox()),
+      if (formMode == FormMode.edit && onSubmitPressed != null)
         _buildFloatingActionButton(
           icon: ProgressIndicatorIcon(
             icon: submitButtonIcon,
             loading: !enabled,
           ),
-          tooltip: formLocalizations.current.saveButton,
-          text: submitButtonText ?? formLocalizations.current.saveButton,
+          tooltip: LnFormsLocalizations.current.saveButton,
+          text: submitButtonText ?? LnFormsLocalizations.current.saveButton,
           onPressed: enabled
               ? () {
                   focusNodes[0].requestFocus();
@@ -387,25 +411,22 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
                 }
               : null,
           focusNode: focusNodes[0],
-        ),
-      ],
-      if (formMode == FormMode.view && modes.contains(FormMode.edit)) ...[
-        Expanded(child: SizedBox()),
+        )
+      else if (formMode == FormMode.view && modes.contains(FormMode.edit))
         _buildFloatingActionButton(
           icon: ProgressIndicatorIcon(
             icon: editButtonIcon,
             loading: !enabled,
           ),
-          tooltip: editButtonText ?? formLocalizations.current.editButton,
-          text: editButtonText ?? formLocalizations.current.editButton,
+          tooltip: editButtonText ?? LnFormsLocalizations.current.editButton,
+          text: editButtonText ?? LnFormsLocalizations.current.editButton,
           onPressed: () => changeMode(FormMode.edit),
           focusNode: focusNodes[0],
         ),
-      ],
     ];
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
     /*final results = _buildResults(
         context, _data, widget.error, _submitActionResult, _submitActionError);*/
 
@@ -417,7 +438,9 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
         widget.modes,
         !widget.loading && !_loadingSubmitAction,
         _changeMode,
-        _data != null && widget.submitAction != null ? _onSubmitPressed : null,
+        _data != null && widget.submitAction != null
+            ? () => _onSubmitPressed(context)
+            : null,
         widget.submitButtonText,
         widget.submitButtonIcon,
         widget.editButtonText,
@@ -461,7 +484,7 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
     );
   }
 
-  Future _onSubmitPressed() async {
+  Future _onSubmitPressed(BuildContext context) async {
     var valid = _formKey.currentState!.validate();
     if (!valid) {
       _scrollController!.animateTo(
@@ -550,51 +573,28 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
     return button;
   }
 
-  Widget? _buildBottomAppBar() {
-    final actionButtons = _buildBottomAppBarActionButtons(
-      context,
-      _editMode ? FormMode.edit : FormMode.view,
-      widget.modes,
-      !widget.loading && !_loadingSubmitAction,
-      _changeMode,
-      _data != null && widget.submitAction != null ? _onSubmitPressed : null,
-      widget.submitButtonText,
-      widget.submitButtonIcon,
-      widget.editButtonText,
-      widget.editButtonIcon,
-    );
-
-    return actionButtons.isNotEmpty
-        ? BottomAppBar(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            elevation: .0,
-            clipBehavior: Clip.antiAlias,
-            child: Responsive(
-              alignment: Alignment.topCenter,
-              margin: widget.margin.symetricScale(vertical: 0),
-              child: Row(children: actionButtons),
-            ),
-          )
-        : null;
-  }
-
   @override
   Widget build(BuildContext context) {
-    formLocalizations.of(context);
-    validatorLocalizations.of(context);
+    final mediaQuery = MediaQuery.of(context);
 
     Widget child = Responsive(
-      padding: widget.padding,
       margin: widget.margin +
           (widget.useSafeAreaForBottom
-              ? MediaQuery.of(context).safeBottomPadding
+              ? mediaQuery.safeBottomPadding
               : EdgeInsets.zero),
       card: widget.card,
-      child: FocusScope(
-        onFocusChange: (value) {
-          //_log("FocusScope.onFocusChange $value");
-        },
-        child: _buildForm(),
+      child: LnAlertContainer.column(
+        childrenBuilder: (context) => [
+          Padding(
+            padding: widget.padding,
+            child: FocusScope(
+              onFocusChange: (value) {
+                //_log("FocusScope.onFocusChange $value");
+              },
+              child: _buildForm(context),
+            ),
+          )
+        ],
       ),
     );
 
@@ -610,10 +610,9 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
     }
 
     if (widget.buttonsLocation == ButtonsLocation.bottomAppBar) {
-      final barHeight =
-          kToolbarHeight + MediaQuery.of(context).safeBottomPadding.bottom;
+      final barHeight = kToolbarHeight + mediaQuery.safeBottomPadding.bottom;
       const animationDuration = Duration(milliseconds: 300);
-      final bottomAppBar = _buildBottomAppBar();
+      final bottomAppBar = _buildBottomAppBar(context);
       final showBar = _bottomAppBarIsVisible && bottomAppBar != null;
       child = Stack(
         children: [
@@ -656,8 +655,6 @@ class LnFormState<FormD extends Copyable<FormD>, SubmitResultD>
       child: child,
     );
   }
-
-  double? _translationY;
 }
 
 class LnFormFocusTarget extends InheritedWidget {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:ln_forms/src/locales/form_localizations.dart';
 
 import '../decoration.dart';
 import '../future_form_field.dart';
 import '../input_form_field.dart';
+import '../locales/forms_localizations.dart';
 
 class TimeInputFormField extends InputFormField<TimeOfDay> {
   TimeInputFormField({
@@ -48,8 +48,8 @@ class _TimeInputFormFieldState extends InputFormFieldState<TimeOfDay>
       context: context,
       initialTime: widget.initialValue ?? TimeOfDay.now(),
       helpText: widget.decoration?.label,
-      confirmText: formLocalizations.current.confirmButton,
-      cancelText: formLocalizations.current.cancelButton,
+      confirmText: LnFormsLocalizations.current.confirmButton,
+      cancelText: LnFormsLocalizations.current.cancelButton,
     );
   }
 }

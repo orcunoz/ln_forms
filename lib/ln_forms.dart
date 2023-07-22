@@ -25,7 +25,9 @@ export 'src/input_formatters/special_text_editing_controller.dart';
 export 'src/input_formatters/upper_case_text_formatter.dart';
 
 export 'src/widgets/dropdown_button.dart';
-export 'src/locales/validator_localizations.dart';
+
+export 'src/locales/forms_localizations.dart';
+export 'src/locales/validators_localizations.dart';
 
 export 'src/utilities/validator.dart';
 

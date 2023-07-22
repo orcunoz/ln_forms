@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ln_forms/ln_forms.dart';
 import 'package:intl/intl.dart';
-import 'package:ln_forms/src/locales/form_localizations.dart';
 
 class DateInputFormField extends InputFormField<DateTime> {
   final DateTime? firstDate;
@@ -68,8 +67,8 @@ class _DateInputFormFieldState extends InputFormFieldState<DateTime>
       fieldLabelText: widget.decoration?.label,
       fieldHintText: widget.decoration?.hint,
       helpText: widget.decoration?.helper,
-      confirmText: formLocalizations.current.confirmButton,
-      cancelText: formLocalizations.current.cancelButton,
+      confirmText: LnFormsLocalizations.current.confirmButton,
+      cancelText: LnFormsLocalizations.current.cancelButton,
     );
   }
 }

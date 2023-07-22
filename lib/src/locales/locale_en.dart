@@ -1,8 +1,9 @@
-import 'form_localizations.dart';
-import 'validator_localizations.dart';
+import 'package:ln_forms/src/locales/validators_localizations.dart';
 
-class LocaleEn extends FormsLocale {
-  const LocaleEn() : super("en");
+import 'forms_localizations.dart';
+
+class FormsLocaleEn extends LnFormsLocalizations {
+  const FormsLocaleEn() : super("en");
 
   @override
   String get okButton => "OK";
@@ -45,8 +46,8 @@ class LocaleEn extends FormsLocale {
   String get restoreChanges => "Restore changes";
 }
 
-class ValidatorLocaleEn extends ValidatorLocale {
-  const ValidatorLocaleEn() : super("en");
+class ValidatorsLocaleEn extends LnValidatorsLocalizations {
+  const ValidatorsLocaleEn() : super("en");
 
   @override
   String get theField => "The field";

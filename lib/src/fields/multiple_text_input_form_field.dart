@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
-import 'package:ln_forms/src/locales/form_localizations.dart';
 
 enum LetterCase { normal, small, capital }
 
@@ -199,7 +198,7 @@ class MultipleTextInputFormFieldState
 
   String? _validateItem(String item) {
     if (widget.uniqueItems && value.contains(item) == true) {
-      return formLocalizations.current.youHaveAlreadyAddedThis;
+      return LnFormsLocalizations.current.youHaveAlreadyAddedThis;
     }
 
     String? errorMessage = widget.validateItem?.call(item);

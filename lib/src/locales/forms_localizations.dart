@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
 import 'locale_en.dart';
@@ -25,13 +26,8 @@ import 'locale_tr.dart';
 
 */
 
-final formLocalizations = LnLocalizationScope<FormsLocale>([
-  LocaleEn(),
-  LocaleTr(),
-]);
-
-abstract class FormsLocale extends LnLocale {
-  const FormsLocale(super.languageCode);
+abstract class LnFormsLocalizations extends LnLocalizations {
+  const LnFormsLocalizations(super.languageCode);
 
   String get okButton;
   String get saveButton;
@@ -46,4 +42,20 @@ abstract class FormsLocale extends LnLocale {
   String clearX(String s);
   String get restoreChanges;
   String get formFields;
+
+  static const delegate = LnLocalizationsDelegate<LnFormsLocalizations>(
+    [FormsLocaleEn(), FormsLocaleTr()],
+    LnFormsLocalizations._setInstance,
+  );
+
+  static void _setInstance(LnFormsLocalizations instance) =>
+      _instance = instance;
+  static LnFormsLocalizations? _instance;
+  static LnFormsLocalizations get current {
+    assert(_instance != null, "No FormsLocalizations instance created before!");
+    return _instance!;
+  }
+
+  static LnFormsLocalizations of(BuildContext context) =>
+      Localizations.of<LnFormsLocalizations>(context, LnFormsLocalizations)!;
 }

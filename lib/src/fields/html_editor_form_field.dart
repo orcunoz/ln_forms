@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
 import 'package:ln_dialogs/ln_dialogs.dart';
-import 'package:ln_forms/src/locales/form_localizations.dart';
 import 'package:quill_html_editor/quill_html_editor.dart';
 import 'package:universal_platform/universal_platform.dart';
 
@@ -157,7 +156,7 @@ class _HtmlEditorFormFieldState extends InputFormFieldState<String>
               ),
             ),
             child: TextButton(
-              child: Text(formLocalizations.current.okButton),
+              child: Text(LnFormsLocalizations.current.okButton),
               onPressed: Navigator.of(context).pop,
             ),
           ),
