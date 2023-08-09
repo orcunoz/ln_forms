@@ -5,23 +5,24 @@ import 'package:ln_dialogs/ln_dialogs.dart';
 import 'package:quill_html_editor/quill_html_editor.dart';
 import 'package:universal_platform/universal_platform.dart';
 
-class HtmlEditorFormField extends InputFormField<String> {
+class HtmlEditorFormField extends LnFormField<String> {
   HtmlEditorFormField({
     super.key,
-    super.readOnly,
     super.enabled,
+    super.readOnly,
+    super.clearable,
+    super.restoreable,
     super.initialValue,
     super.focusNode,
     super.onChanged,
     super.onSaved,
     super.validator,
-    super.clearable,
-    super.restoreable,
     super.style,
-    super.decoration,
+    LnDecoration? decoration = const LnDecoration(),
   }) : super(
+          decoration: decoration,
           useFocusNode: true,
-          builder: (FormFieldState<String> field) {
+          builder: (LnFormFieldState<String> field) {
             final theme = Theme.of(field.context);
             final state = field as _HtmlEditorFormFieldState;
 
@@ -40,10 +41,10 @@ class HtmlEditorFormField extends InputFormField<String> {
       UniversalPlatform.isWeb;
 
   @override
-  InputFormFieldState<String> createState() => _HtmlEditorFormFieldState();
+  LnFormFieldState<String> createState() => _HtmlEditorFormFieldState();
 }
 
-class _HtmlEditorFormFieldState extends InputFormFieldState<String>
+class _HtmlEditorFormFieldState extends LnFormFieldState<String>
     with FutureFormField<String> {
   late final QuillEditorController _controller;
   final editorPadding = const EdgeInsets.only(left: 10, top: 5);
@@ -65,7 +66,8 @@ class _HtmlEditorFormFieldState extends InputFormFieldState<String>
     if (!HtmlEditorFormField.supported) {
       await InformationDialog.show(
         context: context,
-        message: "HTML Editor Not Supported",
+        title: LnFormsLocalizations.of(context).htmlEditorNotSupported,
+        message: LnFormsLocalizations.of(context).htmlEditorNotSupportedWarning,
       );
 
       return Future.value(null);
@@ -130,7 +132,7 @@ class _HtmlEditorFormFieldState extends InputFormFieldState<String>
             child: QuillHtmlEditor(
               text: value,
               controller: _controller,
-              isEnabled: widget.enabled,
+              isEnabled: scopedState.enabled,
               minHeight: contentHeight,
               textStyle: TextStyle(
                 color: theme.textTheme.bodyMedium!.color,
@@ -169,8 +171,7 @@ class _HtmlEditorFormFieldState extends InputFormFieldState<String>
 
   @override
   void dispose() {
-    super.dispose();
-
     _controller.dispose();
+    super.dispose();
   }
 }

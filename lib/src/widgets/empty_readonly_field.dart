@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class EmptyReadOnlyPlaceholder extends Align {
-  EmptyReadOnlyPlaceholder({
+class EmptyReadOnlyField extends Align {
+  EmptyReadOnlyField({
     super.key,
     final Color? color,
   }) : super(

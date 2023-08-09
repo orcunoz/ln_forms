@@ -1,9 +1,7 @@
-import 'package:ln_forms/src/locales/validators_localizations.dart';
-
 import 'forms_localizations.dart';
 
-class FormsLocaleEn extends LnFormsLocalizations {
-  const FormsLocaleEn() : super("en");
+class LnFormsLocaleEn extends LnFormsLocalizations {
+  const LnFormsLocaleEn() : super("en");
 
   @override
   String get okButton => "OK";
@@ -27,6 +25,9 @@ class FormsLocaleEn extends LnFormsLocalizations {
   String get confirmButton => "Confirm";
 
   @override
+  String get continueButton => "Continue";
+
+  @override
   String get youHaveAlreadyAddedThis => "You Have already added this";
 
   @override
@@ -44,10 +45,20 @@ class FormsLocaleEn extends LnFormsLocalizations {
 
   @override
   String get restoreChanges => "Restore changes";
-}
 
-class ValidatorsLocaleEn extends LnValidatorsLocalizations {
-  const ValidatorsLocaleEn() : super("en");
+  @override
+  String get pleaseFixValidationErrors => "Please fix validation errors";
+
+  @override
+  String get unsavedChangesWarning =>
+      "You have unsaved changes on this page and you will lose them if you continue";
+
+  @override
+  String get htmlEditorNotSupported => "Editor not supported!";
+
+  @override
+  String get htmlEditorNotSupportedWarning =>
+      "You can only edit this field on mobile and web platforms";
 
   @override
   String get theField => "The field";

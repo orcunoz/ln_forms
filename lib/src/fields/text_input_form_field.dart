@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_forms/ln_forms.dart';
 
-class TextInputFormField extends InputFormField<String> {
+class TextInputFormField extends LnFormField<String> {
   final bool obscureText;
   final bool? userCanSeeObscureText;
   final Function(String)? onFieldSubmitted;
@@ -21,18 +21,18 @@ class TextInputFormField extends InputFormField<String> {
     super.key,
     String? initialValue,
     super.focusNode,
-    super.readOnly = false,
     super.enabled,
+    super.readOnly,
+    super.clearable,
+    super.restoreable,
     super.onChanged,
     super.onSaved,
     super.autofocus,
     super.validator,
-    super.clearable,
-    super.restoreable,
     super.style,
+    super.decoration,
     this.obscureText = false,
     this.userCanSeeObscureText,
-    super.decoration,
     this.controller,
     TextInputType? keyboardType,
     this.onFieldSubmitted,
@@ -52,7 +52,7 @@ class TextInputFormField extends InputFormField<String> {
           useFocusNode: false,
           initialValue:
               controller != null ? controller.text : (initialValue ?? ''),
-          builder: (InputFormFieldState<String> field) {
+          builder: (LnFormFieldState<String> field) {
             final state = field as TextInputFormFieldState;
             final compObscureContent =
                 state._obscureContentIsVisible ? false : obscureText;
@@ -68,20 +68,22 @@ class TextInputFormField extends InputFormField<String> {
                 textInputAction: textInputAction,
                 style: state.baseTextStyle,
                 autofocus: autofocus,
-                readOnly: readOnly,
+                readOnly: state.scopedState.readOnly,
                 obscuringCharacter: '•',
                 obscureText: compObscureContent,
-                maxLines: readOnly ? (compObscureContent ? 1 : null) : maxLines,
-                minLines: readOnly ? null : minLines,
+                maxLines: state.scopedState.readOnly
+                    ? (compObscureContent ? 1 : null)
+                    : maxLines,
+                minLines: state.scopedState.readOnly ? null : minLines,
                 expands: expands,
                 maxLength: maxLength,
-                onTap: state.isActive ? state.handleTap : null,
+                onTap: state.scopedState.active ? state.handleTap : null,
                 onTapOutside: (_) =>
                     state.isFocused ? state.handleTapOutside() : null,
                 onEditingComplete: null,
                 onSubmitted: onFieldSubmitted,
                 inputFormatters: inputFormatters,
-                enabled: state.isActive,
+                enabled: state.scopedState.active,
                 mouseCursor: MouseCursor.defer,
                 /*enableInteractiveSelection:
             enableInteractiveSelection ?? (!widget.obscureText || !widget.readOnly),*/
@@ -96,7 +98,7 @@ class TextInputFormField extends InputFormField<String> {
   }
 }
 
-class TextInputFormFieldState extends InputFormFieldState<String> {
+class TextInputFormFieldState extends LnFormFieldState<String> {
   bool _obscureContentIsVisible = false;
 
   RestorableTextEditingController? _controller;
@@ -137,7 +139,7 @@ class TextInputFormFieldState extends InputFormFieldState<String> {
       MaterialStateProperty.resolveAs<MouseCursor>(
         MaterialStateMouseCursor.textable,
         <MaterialState>{
-          if (!isActive) MaterialState.disabled,
+          if (!scopedState.active) MaterialState.disabled,
           if (isHovering) MaterialState.hovered,
           if (isFocused) MaterialState.focused,
           if (hasError) MaterialState.error,
@@ -215,7 +217,7 @@ class TextInputFormFieldState extends InputFormFieldState<String> {
   }
 
   void _handleControllerChanged() {
-    didChange(_effectiveController.text);
+    setValue(_effectiveController.text);
   }
 
   @override
@@ -234,8 +236,8 @@ class TextInputFormFieldState extends InputFormFieldState<String> {
   }
 
   @override
-  void didChange(String? value) {
-    super.didChange(value);
+  void setValue(String? value) {
+    super.setValue(value);
     if (_effectiveController.text != value) {
       _effectiveController.text = value ?? '';
     }

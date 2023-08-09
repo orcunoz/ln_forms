@@ -1,9 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+part of 'form.dart';
 
-import 'input_form_field.dart';
-
-mixin FutureFormField<T> on InputFormFieldState<T> {
+mixin FutureFormField<T> on LnFormFieldState<T> {
   Future<T?>? future;
 
   @override
@@ -14,8 +11,7 @@ mixin FutureFormField<T> on InputFormFieldState<T> {
       MaterialStateProperty.resolveAs<MouseCursor>(
         MaterialStateMouseCursor.clickable,
         <MaterialState>{
-          if (widget.readOnly) MaterialState.disabled,
-          if (!widget.enabled) MaterialState.disabled,
+          if (!_scopedState!.active) MaterialState.disabled,
         },
       );
 
@@ -51,7 +47,7 @@ mixin FutureFormField<T> on InputFormFieldState<T> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       future = null;
       if (result != null) {
-        didChange(result);
+        setValue(result);
       }
     });
 

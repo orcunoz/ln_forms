@@ -1,46 +1,45 @@
 import 'package:flutter/material.dart';
 
 import '../decoration.dart';
-import '../future_form_field.dart';
-import '../input_form_field.dart';
-import '../locales/forms_localizations.dart';
+import '../form.dart';
+import '../localization/forms_localizations.dart';
 
-class TimeInputFormField extends InputFormField<TimeOfDay> {
+class TimeInputFormField extends LnFormField<TimeOfDay> {
   TimeInputFormField({
     super.key,
-    super.readOnly,
-    super.enabled,
+    super.enabled = true,
+    super.readOnly = false,
+    super.clearable = true,
+    super.restoreable = true,
     required super.initialValue,
     super.onChanged,
     super.onSaved,
     super.focusNode,
     super.validator,
-    super.clearable,
-    super.restoreable,
     super.style,
-    LnDecoration? decoration,
+    super.decoration,
   }) : super(
-          decoration: (decoration ?? const LnDecoration()).copyWith(
-              suffixIcon: decoration?.suffixIcon ??
-                  const Icon(Icons.access_time_rounded)),
           useFocusNode: true,
-          builder: (InputFormFieldState<TimeOfDay> field) {
-            return Text(
-              field.value?.format(field.context) ?? "",
-            );
-          },
+          builder: (LnFormFieldState<TimeOfDay> field) => Text(
+            field.value?.format(field.context) ?? "",
+          ),
         );
 
   @override
-  InputFormFieldState<TimeOfDay> createState() {
+  LnFormFieldState<TimeOfDay> createState() {
     return _TimeInputFormFieldState();
   }
 }
 
-class _TimeInputFormFieldState extends InputFormFieldState<TimeOfDay>
+class _TimeInputFormFieldState extends LnFormFieldState<TimeOfDay>
     with FutureFormField<TimeOfDay> {
   @override
   TimeInputFormField get widget => super.widget as TimeInputFormField;
+
+  @override
+  LnDecoration get baseDecoration => LnDecoration(
+      suffixIcon: widget.decoration?.suffixIcon ??
+          const Icon(Icons.access_time_rounded));
 
   @override
   Future<TimeOfDay?> toFuture() {

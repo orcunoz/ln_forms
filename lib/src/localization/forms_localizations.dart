@@ -4,29 +4,8 @@ import 'package:ln_core/ln_core.dart';
 import 'locale_en.dart';
 import 'locale_tr.dart';
 
-/*
-
-  "customErrorSomethingWentWrong": "Something went wrong",
-  "customErrorNoResultsFound": "No results found",
-  "customErrorUnauthorizedAccess": "Unauthorized access",
-  "htmlEditorNotSupportedWarning": "You can only edit this field on mobile and web platforms.",
-
-  "formSave": "Save",
-  "formEdit": "Edit",
-  "formCancel": "Cancel",
-  "formCreateNewX": "Create New {item}",
-
-
-
-
-    "customErrorSomethingWentWrong": "Bir şeyler ters gitti",
-    "customErrorNoResultsFound": "Sonuç bulunamadı",
-    "customErrorUnauthorizedAccess": "Yetkisiz erişim",
-    "htmlEditorNotSupportedWarning": "Bu alanı sadece mobil ve web platformlarında düzenleyebilirsiniz.",
-
-*/
-
-abstract class LnFormsLocalizations extends LnLocalizations {
+abstract class LnFormsLocalizations extends LnLocalizationsBase
+    implements _LnValidatorsLocalizations {
   const LnFormsLocalizations(super.languageCode);
 
   String get okButton;
@@ -36,15 +15,20 @@ abstract class LnFormsLocalizations extends LnLocalizations {
   String get restoreButton;
   String get resetButton;
   String get confirmButton;
+  String get continueButton;
   String get youHaveAlreadyAddedThis;
   String get clickHereForSelectAnImage;
   String areYouSureYouWantToX(String action);
   String clearX(String s);
   String get restoreChanges;
   String get formFields;
+  String get pleaseFixValidationErrors;
+  String get unsavedChangesWarning;
+  String get htmlEditorNotSupported;
+  String get htmlEditorNotSupportedWarning;
 
   static const delegate = LnLocalizationsDelegate<LnFormsLocalizations>(
-    [FormsLocaleEn(), FormsLocaleTr()],
+    [LnFormsLocaleEn(), LnFormsLocaleTr()],
     LnFormsLocalizations._setInstance,
   );
 
@@ -58,4 +42,20 @@ abstract class LnFormsLocalizations extends LnLocalizations {
 
   static LnFormsLocalizations of(BuildContext context) =>
       Localizations.of<LnFormsLocalizations>(context, LnFormsLocalizations)!;
+}
+
+abstract class _LnValidatorsLocalizations extends LnLocalizationsBase {
+  const _LnValidatorsLocalizations(super.languageCode);
+
+  String get theField;
+  String fieldCanNotBeEmpty(String field);
+  String fieldShouldBeAccepted(String field);
+  String fieldRequired(String field);
+  String fieldMustBeLengthCharactersLong(String field, int length);
+  String fieldMustBeAtLeastLengthCharactersLong(String field, int length);
+  String fieldMustBeAtMostLengthCharactersLong(String field, int length);
+  String fieldsDontMatch(String fields);
+  String fieldAndTheOtherFieldMustBeDifferent(String field, String otherField);
+  String get emailFormatIsInvalid;
+  String get mobileNumberIsInvalid;
 }

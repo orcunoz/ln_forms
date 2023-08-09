@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
+import 'package:ln_forms/src/utilities/extensions.dart';
 
 enum LetterCase { normal, small, capital }
 
-class MultipleTextInputFormField extends InputFormField<List<String>> {
+class MultipleTextInputFormField extends LnFormField<List<String>> {
   final String? Function(String)? validateItem;
   final List<String> textSeparators;
   final LetterCase letterCase;
@@ -14,6 +15,7 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
   final bool uniqueItems;
   final void Function()? onSubmitted;
   final String? prefixText;
+  final TextInputType keyboardType;
 
   MultipleTextInputFormField.autoSeparate({
     super.key,
@@ -21,14 +23,15 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
     String? initialValue,
     void Function(String?)? onChanged,
     super.onSaved,
-    super.readOnly,
     super.enabled,
-    super.focusNode,
+    super.readOnly,
     super.clearable,
     super.restoreable,
+    super.focusNode,
     List<String> textSeparators = const [' ', ','],
     this.letterCase = LetterCase.normal,
     String? Function(String?)? validator,
+    this.keyboardType = TextInputType.text,
     this.validateItem,
     this.minContentHeight = 0,
     this.inputFormatter,
@@ -51,7 +54,7 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
           validator: validator == null
               ? null
               : (val) => validator(_autoJoin(val, separator)),
-          builder: (FormFieldState<List<String>> field) =>
+          builder: (LnFormFieldState<List<String>> field) =>
               (field as MultipleTextInputFormFieldState)._buildInside(),
         );
 
@@ -60,12 +63,13 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
     super.initialValue = const [],
     super.onChanged,
     super.onSaved,
-    super.readOnly,
-    super.enabled,
     super.focusNode,
+    super.enabled,
+    super.readOnly,
     super.clearable,
     super.restoreable,
     super.validator,
+    this.keyboardType = TextInputType.text,
     this.validateItem,
     this.textSeparators = const [' ', ','],
     this.letterCase = LetterCase.normal,
@@ -80,7 +84,7 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
           useFocusNode: false,
           absorbInsideTapEvents: false,
           decoration: decoration?.apply(prefixText: const Wrapped(null)),
-          builder: (FormFieldState<List<String>> field) =>
+          builder: (LnFormFieldState<List<String>> field) =>
               (field as MultipleTextInputFormFieldState)._buildInside(),
         );
 
@@ -98,19 +102,14 @@ class MultipleTextInputFormField extends InputFormField<List<String>> {
   }
 }
 
-class MultipleTextInputFormFieldState
-    extends InputFormFieldState<List<String>> {
+class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
   late final TextEditingController _textEditingController =
       TextEditingController();
 
   final List<FocusNode> _removeIconfocusNodes = [];
-  List<FocusNode> get removeIconFocusNodes {
-    for (int i = _removeIconfocusNodes.length; i < value.length; i++) {
-      _removeIconfocusNodes
-          .add(FocusNode(skipTraversal: true, canRequestFocus: false));
-    }
-    return _removeIconfocusNodes;
-  }
+  List<FocusNode> get removeIconFocusNodes => _removeIconfocusNodes
+    ..grow(value.length,
+        (_) => FocusNode(skipTraversal: true, canRequestFocus: false));
 
   @override
   MultipleTextInputFormField get widget =>
@@ -216,7 +215,7 @@ class MultipleTextInputFormFieldState
 
   bool _addItemIfValid(String tag) {
     if (tag.isNotEmpty && _validateItem(tag) == null) {
-      didChange((value..add(tag)).toList());
+      setValue((value..add(tag)).toList());
       return true;
     }
     return false;
@@ -226,10 +225,10 @@ class MultipleTextInputFormFieldState
       Color itemBackgroundColor) {
     final ThemeData theme = Theme.of(context);
 
-    final borderColor = widget.readOnly
+    final borderColor = scopedState.readOnly
         ? theme.dividerColor.blend(theme.colorScheme.background, 50)
         : theme.dividerColor;
-    itemBackgroundColor = widget.readOnly
+    itemBackgroundColor = scopedState.readOnly
         ? itemBackgroundColor.blend(theme.colorScheme.background, 50)
         : itemBackgroundColor;
 
@@ -267,7 +266,7 @@ class MultipleTextInputFormFieldState
                 overflow: TextOverflow.fade,
               ),
             ),
-            if (widget.enabled && !widget.readOnly)
+            if (scopedState.active)
               IconButton(
                 constraints: BoxConstraints.tightFor(
                   width: removeIconSize + removeIconPadding.vertical,
@@ -282,7 +281,7 @@ class MultipleTextInputFormFieldState
                 ),
                 color: itemTextStyle.color,
                 onPressed: () =>
-                    didChange((value..removeAt(itemIndex)).toList()),
+                    setValue((value..removeAt(itemIndex)).toList()),
                 focusNode: removeIconFocusNodes[itemIndex],
                 style: const ButtonStyle(
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -306,6 +305,7 @@ class MultipleTextInputFormFieldState
       key: _editableTextWidgetKey,
       controller: _textEditingController,
       focusNode: effectiveFocusNode,
+      keyboardType: widget.keyboardType,
       inputFormatters: [
         if (widget.inputFormatter != null) widget.inputFormatter!
       ],
@@ -351,7 +351,7 @@ class MultipleTextInputFormFieldState
         children: [
           Container(
             constraints: BoxConstraints(
-              minHeight: widget.readOnly ? 0 : widget.minContentHeight,
+              minHeight: scopedState.readOnly ? 0 : widget.minContentHeight,
             ),
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -366,7 +366,7 @@ class MultipleTextInputFormFieldState
           ),
           Container(
             width: effectiveFocusNode.hasFocus ? constraints.maxWidth : 0,
-            height: widget.readOnly ? 0 : null,
+            height: scopedState.readOnly ? 0 : null,
             alignment: Alignment.bottomLeft,
             child: editorSide,
           ),

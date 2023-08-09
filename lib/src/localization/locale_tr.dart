@@ -1,8 +1,7 @@
 import 'forms_localizations.dart';
-import 'validators_localizations.dart';
 
-class FormsLocaleTr extends LnFormsLocalizations {
-  const FormsLocaleTr() : super("tr");
+class LnFormsLocaleTr extends LnFormsLocalizations {
+  const LnFormsLocaleTr() : super("tr");
 
   @override
   String get okButton => "Tamam";
@@ -26,6 +25,9 @@ class FormsLocaleTr extends LnFormsLocalizations {
   String get confirmButton => "Onayla";
 
   @override
+  String get continueButton => "Devam Et";
+
+  @override
   String get youHaveAlreadyAddedThis => "Bunu zaten eklediniz!";
 
   @override
@@ -44,10 +46,21 @@ class FormsLocaleTr extends LnFormsLocalizations {
 
   @override
   String get restoreChanges => "Değişiklikleri geri almak";
-}
 
-class ValidatorsLocaleTr extends LnValidatorsLocalizations {
-  const ValidatorsLocaleTr() : super("tr");
+  @override
+  String get pleaseFixValidationErrors =>
+      "Lütfen doğrulama hatalarını düzeltin";
+
+  @override
+  String get unsavedChangesWarning =>
+      "Bu sayfada kaydedilmemiş değişiklikleriniz var ve eğer devam ederseniz bunları kaybedeceksiniz.";
+
+  @override
+  String get htmlEditorNotSupported => "Bu editör desteklenmiyor!";
+
+  @override
+  String get htmlEditorNotSupportedWarning =>
+      "Bu alanı sadece mobil ve web platformlarında düzenleyebilirsiniz.";
 
   @override
   String get theField => "Bu alan";

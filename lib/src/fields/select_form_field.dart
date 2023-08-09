@@ -8,7 +8,7 @@ enum SelectionListType {
   fixedUnder,
 }
 
-class SelectionFormField<ItemType> extends InputFormField<ItemType> {
+class SelectionFormField<ItemType> extends LnFormField<ItemType> {
   final bool searchable;
   final String Function(ItemType?) itemLabelBuilder;
   final Iterable<ItemType> items;
@@ -21,8 +21,8 @@ class SelectionFormField<ItemType> extends InputFormField<ItemType> {
     super.onChanged,
     super.onSaved,
     super.validator,
-    super.readOnly,
     super.enabled,
+    super.readOnly,
     super.clearable,
     super.restoreable,
     super.focusNode,
@@ -35,7 +35,7 @@ class SelectionFormField<ItemType> extends InputFormField<ItemType> {
     this.selectionType = SelectionListType.dropdown,
   }) : super(
           useFocusNode: true,
-          builder: (InputFormFieldState<ItemType> field) {
+          builder: (LnFormFieldState<ItemType> field) {
             return Text(
               itemLabelBuilder(field.value),
             );
@@ -48,7 +48,7 @@ class SelectionFormField<ItemType> extends InputFormField<ItemType> {
   }
 }
 
-class SelectionFormFieldState<ItemType> extends InputFormFieldState<ItemType>
+class SelectionFormFieldState<ItemType> extends LnFormFieldState<ItemType>
     with FutureFormField<ItemType> {
   @override
   SelectionFormField<ItemType> get widget =>

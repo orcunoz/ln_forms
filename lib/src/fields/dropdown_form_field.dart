@@ -2,7 +2,7 @@ import 'package:flutter/material.dart' hide DropdownButton;
 import 'package:ln_forms/ln_forms.dart';
 import 'package:ln_core/ln_core.dart';
 
-class DropdownFormField<ItemType> extends InputFormField<ItemType> {
+class DropdownFormField<ItemType> extends LnFormField<ItemType> {
   final String Function(ItemType?) itemLabelBuilder;
   final List<ItemType> items;
   final bool? shrinkWrap;
@@ -15,8 +15,8 @@ class DropdownFormField<ItemType> extends InputFormField<ItemType> {
     super.onChanged,
     super.onSaved,
     super.validator,
-    super.readOnly,
     super.enabled,
+    super.readOnly,
     super.clearable,
     super.restoreable,
     super.focusNode,
@@ -32,7 +32,7 @@ class DropdownFormField<ItemType> extends InputFormField<ItemType> {
           useFocusNode: true,
           absorbInsideTapEvents: true,
           decoration: decoration,
-          builder: (InputFormFieldState<ItemType> field) {
+          builder: (LnFormFieldState<ItemType> field) {
             final state = field as _DropdownFormFieldState<ItemType>;
 
             final effectiveContentPadding =
@@ -59,8 +59,8 @@ class DropdownFormField<ItemType> extends InputFormField<ItemType> {
               items: items,
               itemLabelBuilder: itemLabelBuilder,
               focusNode: state.uselessNode,
-              onTap: state.isActive ? state.handleTap : null,
-              enabled: state.isActive,
+              onTap: state.scopedState.active ? state.handleTap : null,
+              enabled: state.scopedState.active,
               fixedWidth:
                   fixedListWidth ?? (state.value == null ? buttonWidth : null),
               style: state.baseTextStyle,
@@ -78,12 +78,12 @@ class DropdownFormField<ItemType> extends InputFormField<ItemType> {
         );
 
   @override
-  InputFormFieldState<ItemType> createState() {
+  LnFormFieldState<ItemType> createState() {
     return _DropdownFormFieldState<ItemType>();
   }
 }
 
-class _DropdownFormFieldState<ItemType> extends InputFormFieldState<ItemType>
+class _DropdownFormFieldState<ItemType> extends LnFormFieldState<ItemType>
     with FutureFormField<ItemType>, WidgetsBindingObserver {
   @override
   DropdownFormField<ItemType> get widget =>

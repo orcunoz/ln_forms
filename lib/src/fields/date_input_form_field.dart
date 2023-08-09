@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ln_forms/ln_forms.dart';
 import 'package:intl/intl.dart';
 
-class DateInputFormField extends InputFormField<DateTime> {
+class DateInputFormField extends LnFormField<DateTime> {
   final DateTime? firstDate;
   final DateTime? lastDate;
 
@@ -10,20 +10,20 @@ class DateInputFormField extends InputFormField<DateTime> {
     super.key,
     super.onChanged,
     super.onSaved,
-    super.readOnly,
     super.enabled,
+    super.readOnly,
+    super.clearable,
+    super.restoreable,
     super.initialValue,
     this.firstDate,
     this.lastDate,
     super.focusNode,
     super.validator,
-    super.clearable,
-    super.restoreable,
     super.style,
     super.decoration,
   }) : super(
           useFocusNode: true,
-          builder: (InputFormFieldState<DateTime> field) {
+          builder: (LnFormFieldState<DateTime> field) {
             final dateFormat = DateFormat.yMMMd(_languageCodeOf(field.context));
             return field.value == null
                 ? null
@@ -35,12 +35,12 @@ class DateInputFormField extends InputFormField<DateTime> {
       Localizations.localeOf(context).languageCode;
 
   @override
-  InputFormFieldState<DateTime> createState() {
+  LnFormFieldState<DateTime> createState() {
     return _DateInputFormFieldState();
   }
 }
 
-class _DateInputFormFieldState extends InputFormFieldState<DateTime>
+class _DateInputFormFieldState extends LnFormFieldState<DateTime>
     with FutureFormField<DateTime> {
   @override
   DateInputFormField get widget => super.widget as DateInputFormField;

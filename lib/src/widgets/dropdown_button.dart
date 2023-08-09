@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
+import 'package:ln_forms/src/widgets/overlimit_scroll_controller.dart';
 
 const Duration _kDropdownMenuDuration = Duration(milliseconds: 300);
 const EdgeInsets _defaultMenuMargin = EdgeInsets.symmetric(vertical: 10);
@@ -174,7 +175,8 @@ class _DropdownMenuState<T> extends State<_DropdownMenu<T>> {
   String _searchText = "";
   Size? measuredSize;
 
-  TextEditingController? _searchTextController;
+  TextEditingController? _searchBarTextController;
+  FocusNode? _searchBarFocusNode;
 
   @override
   void initState() {
@@ -191,14 +193,18 @@ class _DropdownMenuState<T> extends State<_DropdownMenu<T>> {
     );
 
     if (widget.searchable) {
-      _searchTextController = TextEditingController()
+      _searchBarTextController = TextEditingController()
         ..addListener(_handleTextListener);
+      _searchBarFocusNode = FocusNode()..requestFocus();
+      /*WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+        _searchBarFocusNode!.requestFocus();
+      });*/
     }
   }
 
   _handleTextListener() {
     setState(() {
-      _searchText = _searchTextController?.text.trim() ?? "";
+      _searchText = _searchBarTextController?.text.trim() ?? "";
       if (_searchText == "") {
         widget.route.scrollController
             .jumpTo(widget.route.menuLimits.scrollOffset);
@@ -208,7 +214,7 @@ class _DropdownMenuState<T> extends State<_DropdownMenu<T>> {
 
   @override
   void dispose() {
-    _searchTextController
+    _searchBarTextController
       ?..removeListener(_handleTextListener)
       ..dispose();
     super.dispose();
@@ -232,21 +238,22 @@ class _DropdownMenuState<T> extends State<_DropdownMenu<T>> {
     );
     return TextField(
       cursorColor: titleForegroundColor,
-      controller: _searchTextController,
+      controller: _searchBarTextController,
       style: style.copyWith(
         color: titleForegroundColor,
       ),
       textAlignVertical: TextAlignVertical.center,
+      focusNode: _searchBarFocusNode,
       decoration: InputDecoration(
         contentPadding: widget.itemPadding,
-        prefixIcon: _searchTextController!.text.isEmpty
+        prefixIcon: _searchBarTextController!.text.isEmpty
             ? Icon(
                 Icons.search_rounded,
                 color: titleForegroundColor,
               )
             : IconButton(
                 onPressed: () => setState(() {
-                  _searchTextController!.clear();
+                  _searchBarTextController!.clear();
                 }),
                 icon: const Icon(Icons.arrow_back_rounded),
               ),
@@ -463,7 +470,8 @@ class _DropdownRoute<T> extends PopupRoute<T> {
     required this.menuHeightLimit,
     required this.availableHeight,
     required this.searchable,
-    this.lnFormState,
+    this.overlimitScrollController,
+    this.outerScrollController,
     required this.dropdownPosition,
     this.menuWrapperBuilder,
     this.backgroundColor,
@@ -483,13 +491,15 @@ class _DropdownRoute<T> extends PopupRoute<T> {
   final double? menuHeightLimit;
   final double availableHeight;
   final bool searchable;
-  final LnFormFocusTarget? lnFormState;
   final DropdownPosition dropdownPosition;
 
   final List<double?> itemHeights;
   final ScrollController scrollController = ScrollController();
   final Color? backgroundColor;
   final Widget Function(Widget child)? menuWrapperBuilder;
+
+  final OverlimitScrollControllerState? overlimitScrollController;
+  final ScrollController? outerScrollController;
 
   _MenuLimits? _menuLimits;
   _MenuLimits get menuLimits =>
@@ -528,7 +538,7 @@ class _DropdownRoute<T> extends PopupRoute<T> {
   @override
   TickerFuture didPush() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _setOverflowScroll();
+      //_setOverflowScroll();
       _setScrollPositions();
     });
     return super.didPush();
@@ -537,18 +547,18 @@ class _DropdownRoute<T> extends PopupRoute<T> {
   @override
   void didAdd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _setOverflowScroll();
+      //_setOverflowScroll();
       _setScrollPositions();
     });
     super.didAdd();
   }
 
-  _setOverflowScroll() {
-    final controller = lnFormState?.scrollController;
+  /*_setOverflowScroll() {
+    final controller = overlimitScrollController ?? outerScrollController;
     overflowScrollOffset = 0;
 
-    if (controller?.hasClients == true) {
-      final maxScroll = controller!.position.maxScrollExtent;
+    if (controller != null && controller.hasClients) {
+      final maxScroll = controller.position.maxScrollExtent;
       double newOuterScrollOffset =
           controller.offset + menuLimits.outerScrollOffset;
       overflowScrollOffset = 0;
@@ -564,33 +574,23 @@ class _DropdownRoute<T> extends PopupRoute<T> {
       }
     }
 
-    lnFormState?.setTranslationY(-overflowScrollOffset);
-  }
+    overlimitScrollController?.setTranslationY(-overflowScrollOffset);
+  }*/
 
   _setScrollPositions() {
-    final primaryController = lnFormState?.scrollController;
+    final controller = (overlimitScrollController ?? scrollController);
 
-    if (primaryController != null) {
-      double newOuterScrollOffset =
-          primaryController.offset + menuLimits.outerScrollOffset;
-      newOuterScrollOffset = math.min(
-          newOuterScrollOffset, primaryController.position.maxScrollExtent);
-      newOuterScrollOffset = math.max(newOuterScrollOffset, 0);
-
-      primaryController.animateTo(
-        newOuterScrollOffset,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.bounceInOut,
+    if (controller.hasClients) {
+      controller.animateTo(
+        controller.offset + menuLimits.outerScrollOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
       );
     }
-
-    scrollController.jumpTo(menuLimits.scrollOffset);
   }
 
   void _dismiss() {
-    if (overflowScrollOffset != 0) {
-      lnFormState?.setTranslationY(0);
-    }
+    overlimitScrollController?.removeOverlimitOffset();
 
     if (isActive) {
       navigator?.removeRoute(this);
@@ -1119,7 +1119,8 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
       availableHeight: availableHeight,
       fixedWidth: widget.fixedWidth ?? buttonRect.width,
       searchable: widget.searchable,
-      lnFormState: LnFormFocusTarget.of(context),
+      overlimitScrollController: OverlimitScrollController.of(context),
+      outerScrollController: PrimaryScrollController.maybeOf(context),
       dropdownPosition: effectiveDropdownPosition,
     );
 
@@ -1246,7 +1247,8 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
         availableHeight: availableHeight,
         fixedWidth: fixedWidth ?? buttonRect.width,
         searchable: searchable,
-        lnFormState: LnFormFocusTarget.of(context),
+        overlimitScrollController: OverlimitScrollController.of(context),
+        outerScrollController: PrimaryScrollController.maybeOf(context),
         dropdownPosition: DropdownPosition.under,
         menuWrapperBuilder: menuWrapperBuilder,
         backgroundColor: backgroundColor);

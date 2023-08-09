@@ -7,7 +7,7 @@ import 'package:universal_io/io.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ln_forms/ln_forms.dart';
 
-class ImagePickerFormField extends InputFormField<String> {
+class ImagePickerFormField extends LnFormField<String> {
   final ImageSource source;
 
   ImagePickerFormField({
@@ -17,15 +17,16 @@ class ImagePickerFormField extends InputFormField<String> {
     super.onSaved,
     super.focusNode,
     super.validator,
-    super.readOnly,
     super.enabled,
+    super.readOnly,
+    super.clearable,
+    super.restoreable,
     super.decoration,
     this.source = ImageSource.gallery,
   }) : super(
           useFocusNode: true,
-          clearable: false,
-          restoreable: false,
-          builder: (InputFormFieldState<String> field) {
+          style: null,
+          builder: (LnFormFieldState<String> field) {
             final state = field as ImagePickerFormFieldState;
             final theme = Theme.of(state.context);
             final inputBorder = theme.inputDecorationTheme.enabledBorder
@@ -33,7 +34,7 @@ class ImagePickerFormField extends InputFormField<String> {
                 ? theme.inputDecorationTheme.enabledBorder as OutlineInputBorder
                 : null;
             return ConstrainedBox(
-              constraints: state.widget.readOnly
+              constraints: field.scopedState.readOnly
                   ? const BoxConstraints(maxHeight: 300)
                   : const BoxConstraints.expand(height: 300),
               child: ClipRRect(
@@ -58,7 +59,7 @@ class ImagePickerFormField extends InputFormField<String> {
   }
 }
 
-class ImagePickerFormFieldState extends InputFormFieldState<String>
+class ImagePickerFormFieldState extends LnFormFieldState<String>
     with FutureFormField<String> {
   @override
   ImagePickerFormField get widget => super.widget as ImagePickerFormField;
