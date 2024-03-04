@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
+import 'package:ln_forms/ln_forms.dart';
 
 class RegexResultPart {
+  RegexResultPart(this.text, {this.matched = false, this.valid = true});
+
   final bool matched;
   final String text;
   final bool valid;
-
-  RegexResultPart(this.text, {this.matched = false, this.valid = true});
 }
 
-class SpecialTextEditingController extends TextEditingController {
-  final List<String> bracketVariables;
-  final List<String> lessThanGreaterThanVariables;
-  List<RegexResultPart> _parts = [];
-  int errorCount = 0;
-
+class SpecialTextEditingController extends TextFieldController {
   SpecialTextEditingController({
     super.text,
     required this.bracketVariables,
     required this.lessThanGreaterThanVariables,
   });
+
+  final List<String> bracketVariables;
+  final List<String> lessThanGreaterThanVariables;
+  List<RegexResultPart> _parts = [];
+  int errorCount = 0;
 
   @override
   set value(TextEditingValue newValue) {
@@ -110,19 +111,19 @@ class SpecialTextEditingController extends TextEditingController {
   }
 
   List<RegexResultPart> findBracketsParts(String text) => _applyRegex(
-        regExpFunc: RegexUtilities.detectBrackets,
+        regExpFunc: RegExpUtilities.detectBrackets,
         text: text,
         validVariables: bracketVariables,
       );
 
   List<RegexResultPart> findLessGreaterThanParts(String text) => _applyRegex(
-        regExpFunc: RegexUtilities.lessGreaterThanVariables,
+        regExpFunc: RegExpUtilities.lessGreaterThanVariables,
         text: text,
         validVariables: lessThanGreaterThanVariables,
       );
 
   List<RegexResultPart> findUrlLinksParts(String text) => _applyRegex(
-        regExpFunc: RegexUtilities.detectLinks,
+        regExpFunc: RegExpUtilities.detectLinks,
         text: text,
       );
 
@@ -132,14 +133,15 @@ class SpecialTextEditingController extends TextEditingController {
     TextStyle? style,
     required bool withComposing,
   }) {
+    final theme = Theme.of(context);
     final nnTextStyle = style ?? const TextStyle();
 
     TextStyle highlightStyle =
-        nnTextStyle.copyWith(color: Theme.of(context).primaryColor);
+        nnTextStyle.copyWith(color: theme.colorScheme.primary);
     TextStyle errorStyle = nnTextStyle.copyWith(
-      color: Theme.of(context).colorScheme.error,
+      color: theme.colorScheme.error,
       decoration: TextDecoration.underline,
-      decorationColor: Theme.of(context).colorScheme.error,
+      decorationColor: theme.colorScheme.error,
       decorationStyle: TextDecorationStyle.wavy,
     );
 

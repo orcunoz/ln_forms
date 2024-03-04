@@ -97,4 +97,7 @@ class LnFormsLocaleEn extends LnFormsLocalizations {
 
   @override
   String get emailFormatIsInvalid => "Email format is invalid";
+
+  @override
+  String get unsaved => "UNSAVED";
 }

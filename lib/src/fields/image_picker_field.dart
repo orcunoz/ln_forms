@@ -7,12 +7,11 @@ import 'package:universal_io/io.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:ln_forms/ln_forms.dart';
 
-class ImagePickerFormField extends LnFormField<String> {
-  final ImageSource source;
-
-  ImagePickerFormField({
+class ImagePickerField extends LnSimpleFutureField<String?> {
+  ImagePickerField({
     super.key,
-    super.initialValue,
+    super.value,
+    super.controller,
     super.onChanged,
     super.onSaved,
     super.focusNode,
@@ -26,55 +25,45 @@ class ImagePickerFormField extends LnFormField<String> {
   }) : super(
           useFocusNode: true,
           style: null,
-          builder: (LnFormFieldState<String> field) {
-            final state = field as ImagePickerFormFieldState;
-            final theme = Theme.of(state.context);
-            final inputBorder = theme.inputDecorationTheme.enabledBorder
-                    is OutlineInputBorder
-                ? theme.inputDecorationTheme.enabledBorder as OutlineInputBorder
-                : null;
+          builder: (field, computedState) {
+            field as ImagePickerFieldState;
+            final hintColor = field.computedDecoration?.hintStyle?.color ??
+                field.theme.hintColor;
+            final borderRadius =
+                field.computedDecoration?.enabledBorder?.borderRadius ??
+                    BorderRadius.zero;
+
             return ConstrainedBox(
-              constraints: field.scopedState.readOnly
+              constraints: computedState.readOnly
                   ? const BoxConstraints(maxHeight: 300)
                   : const BoxConstraints.expand(height: 300),
               child: ClipRRect(
-                borderRadius:
-                    inputBorder?.borderRadius ?? BorderRadius.circular(8),
-                clipBehavior: Clip.antiAlias,
+                borderRadius: borderRadius,
                 child: field.value != null
                     ? field.buildImageWidget(field.context, field.value!)
                     : Icon(
                         Icons.image_search_rounded,
                         size: 72,
-                        color: theme.primaryColor.withOpacity(0.3),
+                        color: hintColor.withOpacity(.3),
                       ),
               ),
             );
           },
+          emptyValue: null,
+          onTrigger: _onTrigger,
         );
 
+  final ImageSource source;
+
   @override
-  ImagePickerFormFieldState createState() {
-    return ImagePickerFormFieldState();
+  LnSimpleFutureFieldState<String?> createState() {
+    return ImagePickerFieldState();
   }
-}
 
-class ImagePickerFormFieldState extends LnFormFieldState<String>
-    with FutureFormField<String> {
-  @override
-  ImagePickerFormField get widget => super.widget as ImagePickerFormField;
-
-  String? _lastSavedImageUrl;
-  Uint8List? _decodedImage;
-
-  @override
-  InputDecoration get effectiveDecoration => super.effectiveDecoration.copyWith(
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-      );
-
-  @override
-  Future<String?> toFuture() async {
-    final pickedFile = await ImagePicker().pickImage(source: widget.source);
+  static Future<String?> _onTrigger(
+      LnSimpleFutureFieldState<String?> state) async {
+    final field = state.widget as ImagePickerField;
+    final pickedFile = await ImagePicker().pickImage(source: field.source);
 
     if (pickedFile != null) {
       return await File(pickedFile.path).toBase64();
@@ -82,6 +71,19 @@ class ImagePickerFormFieldState extends LnFormFieldState<String>
 
     return null;
   }
+}
+
+class ImagePickerFieldState extends LnSimpleFutureFieldState<String?> {
+  @override
+  ImagePickerField get widget => super.widget as ImagePickerField;
+
+  String? _lastSavedImageUrl;
+  Uint8List? _decodedImage;
+
+  @override
+  InputDecoration? get computedDecoration => super.computedDecoration?.copyWith(
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+      );
 
   Widget buildImageWidget(BuildContext context, String imageUrl) {
     ImageProvider<Object> imageProvider;
@@ -108,9 +110,14 @@ class ImagePickerFormFieldState extends LnFormFieldState<String>
         return Icon(
           Icons.image_not_supported_outlined,
           size: 72,
-          color: Theme.of(context).colorScheme.error.withOpacity(0.5),
+          color: theme.colorScheme.error.withOpacity(0.5),
         );
       },
     );
+  }
+
+  @override
+  FieldController<String?> createController(String? value) {
+    return NullableFieldController<String>(null);
   }
 }

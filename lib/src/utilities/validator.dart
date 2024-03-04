@@ -67,16 +67,11 @@ class Validator<T> {
   Validator<T> regExp(RegExp regExp, String errorMessage) => test((val) =>
       val == null || regExp.hasMatch(val.toString()) ? null : errorMessage);
 
-  String? call(T? value) {
+  String? build(T? value) {
     for (var func in _functions) {
       var errorText = func(value);
       if (errorText != null) return errorText;
     }
     return null;
   }
-
-  static bool isEmptyValue(dynamic value) =>
-      value == null ||
-      (value is String && value.isEmpty) ||
-      (value is Iterable && value.isEmpty);
 }

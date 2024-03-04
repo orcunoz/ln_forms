@@ -26,6 +26,7 @@ abstract class LnFormsLocalizations extends LnLocalizationsBase
   String get unsavedChangesWarning;
   String get htmlEditorNotSupported;
   String get htmlEditorNotSupportedWarning;
+  String get unsaved;
 
   static const delegate = LnLocalizationsDelegate<LnFormsLocalizations>(
     [LnFormsLocaleEn(), LnFormsLocaleTr()],

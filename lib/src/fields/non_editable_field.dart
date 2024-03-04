@@ -1,34 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
-class NonEditableField extends StatelessWidget {
-  final String? labelText;
-  final String? text;
-  final Widget? child;
-  final bool readOnly;
-  final bool enabled;
-  const NonEditableField({
+import '../form.dart';
+
+class NonEditableField extends LnContextDependentsWidget {
+  NonEditableField({
     super.key,
     this.labelText,
     this.text,
     this.child,
-    this.readOnly = false,
-    this.enabled = true,
   })  : assert(text != null || child != null),
         assert(text == null || child == null);
 
+  final String? labelText;
+  final String? text;
+  final Widget? child;
+
   @override
   Widget build(BuildContext context) {
-    final textStyle = Theme.of(context).defaultFormFieldStyle;
+    super.build(context);
+
+    final form = LnForm.maybeOf(context);
+    final bool enabled = form?.computedState.enabled ?? true;
+    final bool readOnly = form?.computedState.readOnly ?? true;
+
     final widget = InputDecorator(
       textAlignVertical: TextAlignVertical.center,
-      decoration: _prepareDecorationForBuild(context, Theme.of(context)),
-      baseStyle: textStyle,
+      decoration: _prepareDecorationForBuild(context, readOnly),
+      baseStyle: theme.formFieldStyle,
       isHovering: false,
       isFocused: false,
       isEmpty: false,
       child: DefaultTextStyle(
-        style: textStyle.copyWith(color: textStyle.color?.withOpacity(0.8)),
+        style: theme.formFieldStyle.copyWith(
+          color: theme.formFieldStyle.color?.withOpacity(0.8),
+        ),
         child: child ?? Text(text!),
       ),
     );
@@ -71,7 +77,7 @@ class NonEditableField extends StatelessWidget {
   }
 
   InputDecoration _prepareDecorationForBuild(
-      BuildContext context, ThemeData theme) {
+      BuildContext context, bool readOnly) {
     InputDecoration decoration = InputDecoration(
             labelText: labelText,
             floatingLabelBehavior: FloatingLabelBehavior.always)
@@ -87,8 +93,7 @@ class NonEditableField extends StatelessWidget {
     if (readOnly) {
       decoration = decoration.copyWith(
         floatingLabelBehavior: FloatingLabelBehavior.always,
-        contentPadding:
-            decoration.contentPadding?.at(context).copyWith(left: 0, right: 0),
+        contentPadding: decoration.contentPadding?.removeHorizontal,
         border: decoration.readOnlyBorder,
         errorBorder: decoration.readOnlyBorder,
         enabledBorder: decoration.readOnlyBorder,

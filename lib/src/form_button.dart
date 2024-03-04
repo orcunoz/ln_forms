@@ -1,302 +1,233 @@
 part of 'form.dart';
 
-enum _LnFormButtonType {
-  enableEditing,
-  submit,
-  cancelEditing,
-  restore,
-  clear,
-}
+const _kDefaultTextOfAction = "\$\$DEF\$\$";
 
-typedef OnPressed = FutureOr Function(LnFormController);
-
-const _defaultOfType = "\$\$DEF\$\$";
+typedef ActionGetter = FormAction Function(LnFormController);
 
 class LnFormButton extends StatefulWidget {
-  final String? text;
-  final Widget? icon;
-  final String? tooltip;
-  final OnPressed? onPressed;
-  final ButtonStyle? style;
-  final Set<FormModes> effectiveModes;
-  final bool primary;
-
-  final _LnFormButtonType? _type;
-
-  const LnFormButton({
+  LnFormButton({
     this.text,
     this.icon,
     this.tooltip,
-    required this.onPressed,
+    required FormActionCallable? onPressed,
     this.style,
-    this.effectiveModes = const {FormModes.view, FormModes.edit},
     this.primary = true,
-  }) : _type = null;
+  }) : actionOf = ((controller) =>
+            FormAction(formController: controller, callable: onPressed));
 
   const LnFormButton._({
-    required _LnFormButtonType type,
+    required this.actionOf,
     required this.text,
     required this.icon,
     required this.tooltip,
-    required this.onPressed,
-    required this.effectiveModes,
     required this.style,
     required this.primary,
-  })  : _type = type,
-        assert(text != null || icon != null);
+  }) : assert(text != null || icon != null);
 
-  LnFormButton.startEditing({
-    String? text = _defaultOfType,
+  LnFormButton.enableEditing({
+    String? text = _kDefaultTextOfAction,
     Widget? icon = const Icon(Icons.edit_note_rounded),
     String? tooltip,
     ButtonStyle? style,
     bool primary = true,
   }) : this._(
-          type: _LnFormButtonType.enableEditing,
-          text: _defaultOr(text, _LnFormButtonType.enableEditing),
+          actionOf: (form) => form.enableEditing,
+          text: text,
           icon: icon,
           tooltip: tooltip,
-          onPressed: null,
-          effectiveModes: const {FormModes.view},
           style: style,
           primary: primary,
         );
 
   LnFormButton.cancelEditing({
-    String? text = _defaultOfType,
+    String? text = _kDefaultTextOfAction,
     Widget? icon = const Icon(Icons.close_rounded),
     String? tooltip,
     ButtonStyle? style,
     bool primary = false,
   }) : this._(
-          type: _LnFormButtonType.cancelEditing,
-          text: _defaultOr(text, _LnFormButtonType.cancelEditing),
+          actionOf: (form) => form.cancelEditing,
+          text: text,
           icon: icon,
           tooltip: tooltip,
-          onPressed: null,
-          effectiveModes: const {FormModes.edit},
           style: style,
           primary: primary,
         );
 
   LnFormButton.submit({
-    String? text = _defaultOfType,
+    String? text = _kDefaultTextOfAction,
     Widget? icon = const Icon(Icons.save_outlined),
     String? tooltip,
     ButtonStyle? style,
     bool primary = true,
   }) : this._(
-          type: _LnFormButtonType.submit,
-          text: _defaultOr(text, _LnFormButtonType.submit),
+          actionOf: (form) => form.submit,
+          text: text,
           icon: icon,
           tooltip: tooltip,
-          onPressed: null,
-          effectiveModes: const {FormModes.edit},
           style: style,
           primary: primary,
         );
 
   LnFormButton.restore({
-    String? text = _defaultOfType,
+    String? text = _kDefaultTextOfAction,
     Widget? icon = const Icon(Icons.settings_backup_restore_rounded),
     String? tooltip,
     ButtonStyle? style,
     bool primary = false,
   }) : this._(
-          type: _LnFormButtonType.restore,
-          text: _defaultOr(text, _LnFormButtonType.restore),
+          actionOf: (form) => form.restore,
+          text: text,
           icon: icon,
           tooltip: tooltip,
-          onPressed: null,
-          effectiveModes: const {FormModes.edit},
           style: style,
           primary: primary,
         );
 
   LnFormButton.clear({
-    String? text = _defaultOfType,
+    String? text = _kDefaultTextOfAction,
     Widget? icon = const Icon(Icons.clear_all_rounded),
     String? tooltip,
     ButtonStyle? style,
     bool primary = false,
   }) : this._(
-          type: _LnFormButtonType.clear,
-          text: _defaultOr(text, _LnFormButtonType.clear),
+          actionOf: (form) => form.clear,
+          text: text,
           icon: icon,
           tooltip: tooltip,
-          onPressed: null,
-          effectiveModes: const {FormModes.edit},
           style: style,
           primary: primary,
         );
 
-  static String? _defaultOr(String? text, _LnFormButtonType type) =>
-      text == _defaultOfType
-          ? switch (type) {
-              _LnFormButtonType.enableEditing =>
-                LnFormsLocalizations.current.editButton,
-              _LnFormButtonType.cancelEditing =>
-                LnFormsLocalizations.current.cancelButton,
-              _LnFormButtonType.submit =>
-                LnFormsLocalizations.current.saveButton,
-              _LnFormButtonType.restore =>
-                LnFormsLocalizations.current.restoreButton,
-              _LnFormButtonType.clear =>
-                LnFormsLocalizations.current.resetButton,
-            }
-          : text;
+  final String? text;
+  final Widget? icon;
+  final String? tooltip;
+  final ButtonStyle? style;
+  final bool primary;
+
+  final ActionGetter actionOf;
 
   @override
   State<LnFormButton> createState() => LnFormButtonState();
 }
 
 class LnFormButtonState extends LnState<LnFormButton> {
-  late FocusNode _focusNode;
-  bool _inProgress = false;
+  final FocusNode _focusNode = FocusNode();
+  LnFormController? _form;
 
-  @override
-  void initState() {
-    super.initState();
+  Text? textOf(FormAction action) {
+    final text = widget.text == _kDefaultTextOfAction
+        ? action.defaultButtonText
+        : widget.text;
 
-    _focusNode = FocusNode();
+    return text == null ? null : Text(text);
   }
 
   @override
-  void deactivate() {
-    _LnFormScope.maybeOf(context)?._unregisterButton(this);
-    super.deactivate();
-  }
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final form = LnForm.of(context);
+    if (form != _form) {
+      _form?._unregisterButton(this);
+      _form = form.._registerButton(this);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final form = _LnFormScope.maybeOf(context)?.._registerButton(this);
-    assert(form != null,
+    assert(_form != null,
         "No LnForm found in context. LnFormButton widgets cannot be used without the LnForm");
-    final controller = form!.controller;
+    final form = _form!;
 
-    FormModes currentFormMode =
-        controller.readOnly ? FormModes.view : FormModes.edit;
-    if (!widget.effectiveModes.contains(currentFormMode)) {
-      return const SizedBox.shrink();
-    }
+    final action = widget.actionOf(form);
+    final text = textOf(action);
 
-    final FutureOr Function()? onPressed;
-    if (widget._type == null) {
-      onPressed =
-          widget.onPressed == null ? null : () => widget.onPressed!(controller);
-    } else {
-      onPressed = switch (widget._type!) {
-        _LnFormButtonType.cancelEditing => () => controller.readOnly = false,
-        _LnFormButtonType.enableEditing => () => controller.readOnly = true,
-        _LnFormButtonType.clear => controller.clear,
-        _LnFormButtonType.restore => controller.restore,
-        _LnFormButtonType.submit => controller.submit,
-      };
-    }
-
-    var computedOnPressed = !controller.enabled || controller.inProgress
-        ? null
-        : () async {
-            _focusNode.requestFocus();
-            if (!controller.progressOverlay) {
-              _inProgress = true;
-              rebuild();
-            }
-            var result = await controller._wait(onPressed!);
-            if (_inProgress) {
-              _inProgress = false;
-              rebuild();
-            }
-            return result;
-          };
-
-    if (widget.text == null) {
-      return widget.primary
-          ? IconButton.filled(
-              onPressed: computedOnPressed,
-              icon: progressIndicatorIconWidget!,
-              focusNode: _focusNode,
-              style: widget.style,
-            )
-          : IconButton(
-              onPressed: computedOnPressed,
-              icon: progressIndicatorIconWidget!,
-              focusNode: _focusNode,
-              style: widget.style,
-            );
-    } else if (widget.icon == null) {
-      return widget.primary
-          ? FilledButton(
-              onPressed: computedOnPressed,
-              child: progressIndicatorTextWidget!,
-              focusNode: _focusNode,
-              style: widget.style,
-            )
-          : TextButton(
-              onPressed: computedOnPressed,
-              child: progressIndicatorTextWidget!,
-              focusNode: _focusNode,
-              style: widget.style,
-            );
-    } else {
-      return widget.primary
-          ? FilledButton.icon(
-              onPressed: computedOnPressed,
-              icon: progressIndicatorIconWidget!,
-              label: Text(widget.text!),
-              focusNode: _focusNode,
-              style: widget.style,
-            )
-          : TextButton.icon(
-              onPressed: computedOnPressed,
-              icon: progressIndicatorIconWidget!,
-              label: Text(widget.text!),
-              focusNode: _focusNode,
-              style: widget.style,
-            );
-    }
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        form.listenable,
+        _focusNode,
+      ]),
+      builder: (context, child) => Visibility(
+        visible: switch (form.computedState.readOnly) {
+          true => action == form.enableEditing,
+          false => action != form.enableEditing,
+        },
+        child: _ProgressButton(
+          primary: widget.primary,
+          progress: (form as LnFormActions).isActionInProgress(action),
+          text: text,
+          icon: widget.icon,
+          style: widget.style,
+          onPressed: action.enabled ? action.call : null,
+          focusNode: _focusNode,
+        ),
+      ),
+    );
   }
 
-  Widget? get progressIndicatorIconWidget => widget.icon == null
-      ? null
-      : ProgressIndicatorWidget(
-          inProgress: _inProgress,
-          widget: widget.icon!,
-        );
+  @override
+  void dispose() {
+    super.dispose();
+    _form?._unregisterButton(this);
+    _focusNode.dispose();
+  }
+}
 
-  Widget? get progressIndicatorTextWidget => widget.text == null
-      ? null
-      : ProgressIndicatorWidget(
-          inProgress: _inProgress,
-          widget: Text(widget.text!),
-        );
+class _ProgressButton extends Builder {
+  _ProgressButton({
+    required bool primary,
+    required bool progress,
+    Widget? text,
+    Widget? icon,
+    ButtonStyle? style,
+    VoidCallback? onPressed,
+    FocusNode? focusNode,
+  })  : assert(text != null || icon != null),
+        super(builder: (context) {
+          bool hasText = text != null;
+          bool hasIcon = icon != null;
+          style ??= _defaultStyleOf(context, hasIcon && hasText);
 
-  Color get primaryDisabledOnColor => _calculateOnColor(
-        widget.style,
-        Theme.of(context).filledButtonTheme.style,
-        Theme.of(context).colorScheme.onBackground,
-      );
+          Widget child = ProgressIndicatorWidget(
+            progress: progress,
+            widget: hasIcon ? icon : text!,
+          );
 
-  Color get disabledOnColor => _calculateOnColor(
-        widget.style,
-        Theme.of(context).textButtonTheme.style,
-        Theme.of(context).colorScheme.onBackground,
-      );
+          if (hasIcon && hasText) {
+            child = SpacedRow(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                child,
+                text,
+              ],
+            );
+          }
 
-  Color _calculateOnColor(
-          ButtonStyle? style, ButtonStyle? defaultStyle, Color defaultColor) =>
-      (style != null
-          ? _disabledColorOf(style)
-          : _disabledColorOf(defaultStyle)) ??
-      defaultColor;
+          return primary
+              ? FilledButton(
+                  onPressed: onPressed,
+                  focusNode: focusNode,
+                  style: style,
+                  child: child,
+                )
+              : TextButton(
+                  onPressed: onPressed,
+                  focusNode: focusNode,
+                  style: style,
+                  child: child,
+                );
+        });
 
-  Color? _disabledColorOf(ButtonStyle? style) =>
-      (style?.iconColor ?? style?.foregroundColor)
-          ?.resolve({MaterialState.disabled});
+  static ButtonStyle _defaultStyleOf(BuildContext context, bool withIcon) {
+    double m = withIcon ? 1.5 : 1.0;
+    return FilledButton.styleFrom(
+      minimumSize: Size(kMinInteractiveDimension, kMinInteractiveDimension),
+      padding: ButtonStyleButton.scaledPadding(
+        EdgeInsetsDirectional.fromSTEB(16, 0, 16 * m, 0),
+        EdgeInsetsDirectional.fromSTEB(8, 0, 8 * m, 0),
+        EdgeInsetsDirectional.fromSTEB(4, 0, 4 * m, 0),
+        MediaQuery.textScalerOf(context).scale(1),
+      ),
+    );
+  }
 }

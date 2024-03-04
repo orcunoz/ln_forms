@@ -1,66 +1,230 @@
 part of 'form.dart';
 
-abstract class LnFormField<T> extends StatefulWidget {
-  final T? initialValue;
-  final TextStyle? style;
-  final LnDecoration? decoration;
-  final FocusNode? focusNode;
-  final bool useFocusNode;
-  final bool autofocus;
+typedef ValueValidator<T> = String? Function(T);
 
-  final bool absorbInsideTapEvents;
-  final bool handleTapOutsideWhenFocused;
-  final bool unfocusWhenTapOutside;
+typedef FieldOnTap = void Function();
+typedef FieldOnTapOutside = void Function();
+typedef FieldOnFocusChanged = void Function(bool);
+typedef FieldOnKeyEvent = KeyEventResult Function(KeyEvent);
+typedef FieldOnPointerEnter = void Function(PointerEnterEvent);
+typedef FieldOnPointerExit = void Function(PointerExitEvent);
 
-  final void Function(T? newValue)? onSaved;
-  final String? Function(T?)? validator;
-  final Widget? Function(LnFormFieldState<T> state) builder;
-  final void Function(T?)? onChanged;
-
-  final String? restorationId;
-
-  final bool? enabled;
-  final bool? readOnly;
-  final bool? clearable;
-  final bool? restoreable;
-
-  const LnFormField({
+abstract class LnFormField<T, CT> extends EditablePropsWidget {
+  LnFormField({
     required super.key,
-    required this.initialValue,
+    required this.value,
     required this.onChanged,
     required this.onSaved,
     required this.focusNode,
     required this.useFocusNode,
     this.autofocus = false,
-    this.enabled,
-    this.readOnly,
-    this.clearable,
-    this.restoreable,
+    this.mouseCursor,
+    super.enabled,
+    super.readOnly,
+    super.clearable,
+    super.restoreable,
     required this.validator,
     required this.style,
     required this.decoration,
     required this.builder,
-    this.absorbInsideTapEvents = false,
-    this.handleTapOutsideWhenFocused = false,
-    this.unfocusWhenTapOutside = false,
     this.restorationId,
-  });
+    this.onFocusChanged,
+    this.onKeyEvent,
+    this.onTap,
+    this.onPointerEnter,
+    this.onPointerExit,
+    this.disableGestures = false,
+    required this.controller,
+  })  : assert(value == null || controller == null),
+        assert(
+            controller != null || value != null || null is T,
+            "label: ${decoration?.label}, "
+            "controller: $controller, "
+            "value: $value, "
+            "isNullable: ${null is T}");
+
+  final T? value;
+  final TextStyle? style;
+  final LnDecoration? decoration;
+  final FocusNode? focusNode;
+  final bool useFocusNode;
+  final bool autofocus;
+  final bool disableGestures;
+
+  final MouseCursor? mouseCursor;
+
+  final ValueValidator<T>? validator;
+  final Widget? Function(LnFormFieldState<T, CT>, ComputedEditableProps)
+      builder;
+
+  final String? restorationId;
+
+  final ValueChanged<T>? onSaved;
+  final ValueChanged<T>? onChanged;
+
+  final FieldOnTap? onTap;
+  final FieldOnFocusChanged? onFocusChanged;
+  final FieldOnKeyEvent? onKeyEvent;
+  final FieldOnPointerEnter? onPointerEnter;
+  final FieldOnPointerExit? onPointerExit;
+
+  final BaseFieldController<CT, T>? controller;
 
   @override
-  State<LnFormField<T>> createState() => LnFormFieldState<T>();
+  LnFormFieldState<T, CT> createState();
 }
 
-class LnFormFieldState<T> extends State<LnFormField<T>> with RestorationMixin {
-  late T? _value = widget.initialValue;
+abstract class LnSimpleField<T> extends LnFormField<T, T> {
+  LnSimpleField({
+    required super.key,
+    required super.value,
+    required super.onChanged,
+    required super.onSaved,
+    required super.focusNode,
+    required super.useFocusNode,
+    super.autofocus,
+    super.mouseCursor,
+    super.enabled,
+    super.readOnly,
+    super.clearable,
+    super.restoreable,
+    required super.validator,
+    required super.style,
+    required super.decoration,
+    required super.builder,
+    super.restorationId,
+    super.onFocusChanged,
+    super.onKeyEvent,
+    super.onTap,
+    super.onPointerEnter,
+    super.onPointerExit,
+    required super.controller,
+    required this.emptyValue,
+    super.disableGestures,
+  });
+
+  final T emptyValue;
+
+  @override
+  LnSimpleFieldState<T> createState() {
+    return LnSimpleFieldState<T>();
+  }
+}
+
+mixin _FormFieldControllerMixin<T, CT> on LnState<LnFormField<T, CT>>
+    implements FieldLoggerMixin {
+  BaseFieldController<CT, T>? _localController;
+  BaseFieldController<CT, T> get controller =>
+      widget.controller ?? _localController!;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.controller == null) {
+      _createInternalController(widget.value as T);
+    } else {
+      widget.controller!.addListener(_handleControllerChanged);
+    }
+  }
+
+  //Restoration
+  /*@override
+  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
+    if (_localController != null) {
+      _registerController();
+    }
+    registerForRestoration(_errorText, 'error_text');
+  }*/
+
+  @override
+  void didUpdateWidget(covariant LnFormField<T, CT> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      if (oldWidget.controller == null) {
+        //unregisterFromRestoration(_localController!);
+        _localController!.dispose();
+        _localController = null;
+      } else {
+        oldWidget.controller!.removeListener(_handleControllerChanged);
+      }
+
+      if (widget.controller == null) {
+        _createInternalController(oldWidget.value as T);
+      } else {
+        widget.controller!.addListener(_handleControllerChanged);
+      }
+    } else if (oldWidget.value != widget.value && widget.controller == null) {
+      endOfFrame(() {
+        _localController!.value = _localController!.valueOf(widget.value as T);
+      });
+    }
+  }
+
+  BaseFieldController<CT, T> createController(T value);
+
+  //Restoration
+  /*void _registerController() {
+    assert(_localController != null);
+    registerForRestoration(_localController!, 'controller');
+  }*/
+
+  void _createInternalController(T value) {
+    assert(_localController == null);
+    _localController = createController(value)
+      ..addListener(_handleControllerChanged);
+
+    //Restoration
+    /*if (!restorePending) {
+      _registerController();
+    }*/
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    if (widget.controller != null) {
+      widget.controller!.removeListener(_handleControllerChanged);
+    } else {
+      _localController!.dispose();
+    }
+  }
+
+  void _handleControllerChanged() {
+    final value = controller.fieldValueOf(controller.value);
+    onValueChanged(value);
+    if (widget.onChanged != null) {
+      widget.onChanged!(value);
+    }
+  }
+
+  void onValueChanged(T value) {}
+}
+
+mixin _FieldValidator<T, CT> on RestorationMixin<LnFormField<T, CT>>
+    implements FieldLoggerMixin {
+  ValueValidator<T>? get validator;
+  T get value;
+
   final RestorableStringN _errorText = RestorableStringN(null);
-
-  ScopedState? _scopedState;
-  ScopedState get scopedState => _scopedState!;
-
-  T? get value => _value;
+  Listenable get errorListenable => _errorText;
   String? get errorText => _errorText.value;
-  bool get hasError => _errorText.value != null;
-  bool get isValid => widget.validator?.call(_value) == null;
+  bool get hasError => errorText != null;
+
+  bool _isPassed = false;
+  void setPassed(bool val) {
+    if (val == _isPassed) return;
+
+    _isPassed = val;
+  }
+
+  void _validateIfPassed() {
+    String? error;
+    if (_isPassed && validator != null) {
+      error = validator!(value);
+    }
+
+    _errorText.value = error;
+  }
 
   @override
   String? get restorationId => widget.restorationId;
@@ -70,50 +234,210 @@ class LnFormFieldState<T> extends State<LnFormField<T>> with RestorationMixin {
     registerForRestoration(_errorText, 'error_text');
   }
 
-  T? _stateInitialValue;
-  bool _focusedBefore = false;
-  bool _isPassed = false;
-  bool get isPassed => _isPassed;
+  bool validate() {
+    log("events.validate(isPassed: $_isPassed)");
+    if (!_isPassed) {
+      setPassed(true);
+    }
 
-  bool _isHovering = false;
-  bool get isHovering => _isHovering;
+    _validateIfPassed();
 
-  bool get isFocused => scopedState.active && effectiveFocusNode.hasFocus;
+    return !hasError;
+  }
+}
 
-  bool get isEmpty => Validator.isEmptyValue(value);
-
-  bool get unsaved =>
-      _stateInitialValue != value &&
-      !(Validator.isEmptyValue(_stateInitialValue) &&
-          Validator.isEmptyValue(value));
-
+mixin _FieldFocusNode<T, CT> on LnState<LnFormField<T, CT>>
+    implements FieldLoggerMixin {
   FocusNode? _internalNode;
   FocusNode get effectiveFocusNode => widget.focusNode ?? _internalNode!;
+  Listenable get focusListenable => effectiveFocusNode;
+  bool _focused = false;
+  bool get focused => _focused;
 
-  TextStyle get baseTextStyle =>
-      Theme.of(context).defaultFormFieldStyle.merge(widget.style);
+  void requestFocus() {
+    if (!_focused) {
+      log("actions.requestFocus(focusedBefore: $_focused)");
+      effectiveFocusNode.requestFocus();
+    }
+  }
 
-  FocusNode? _editingActionButtonFocusNode;
-  FocusNode get editingActionButtonFocusNode =>
-      _editingActionButtonFocusNode ??=
-          FocusNode(skipTraversal: true, canRequestFocus: true);
+  void unfocus() {
+    if (_focused) {
+      log("actions.unfocus(isFocused: $_focused)");
+      effectiveFocusNode.unfocus();
+    }
+  }
 
-  Widget? get editingActionButton {
-    if (scopedState.active && UniversalPlatform.isDesktopOrWeb
-        ? isHovering
-        : isFocused) {
-      if (scopedState.restoreable && value != _stateInitialValue) {
-        return IconButton(
-          icon: const Icon(Icons.settings_backup_restore_rounded),
-          focusNode: editingActionButtonFocusNode,
-          onPressed: () => setValue(_stateInitialValue),
+  void _syncNode(FocusNode? node) {
+    node
+      ?..addListener(_handleFocusChanged)
+      ..onKeyEvent = _handleKeyEvent;
+
+    if (node != null && _focused != node.hasFocus) {
+      _focused = node.hasFocus;
+      node.requestFocus();
+    }
+  }
+
+  void _removeNodeListeners(FocusNode? node) {
+    node?.removeListener(_handleFocusChanged);
+    if (node?.onKeyEvent == _handleKeyEvent) {
+      node?.onKeyEvent = null;
+    }
+  }
+
+  void _createInternalFocusNode() {
+    assert(_internalNode == null);
+    assert(widget.focusNode == null);
+    _internalNode = FocusNode();
+    _syncNode(_internalNode);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.focusNode == null) {
+      _createInternalFocusNode();
+    } else {
+      _syncNode(widget.focusNode);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.focusNode != oldWidget.focusNode) {
+      if (oldWidget.focusNode == null) {
+        _internalNode!.dispose();
+        _internalNode = null;
+      } else {
+        _removeNodeListeners(oldWidget.focusNode);
+      }
+
+      if (widget.focusNode == null) {
+        _createInternalFocusNode();
+      } else {
+        _syncNode(widget.focusNode);
+      }
+    }
+  }
+
+  _handleFocusChanged() {
+    final nodeFocused = effectiveFocusNode.hasFocus;
+    if (nodeFocused != _focused) {
+      _focused = nodeFocused;
+      onFocusChanged(nodeFocused);
+      if (widget.onFocusChanged != null) {
+        widget.onFocusChanged!(nodeFocused);
+      }
+    }
+  }
+
+  void onFocusChanged(bool focused) {}
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (!_focused) {
+      return KeyEventResult.ignored;
+    }
+    log("handlers.onKeyEvent(${event.runtimeType}: "
+        "${event.logicalKey.keyLabel})");
+
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      unfocus();
+      return KeyEventResult.handled;
+    }
+
+    if (widget.onKeyEvent != null) {
+      widget.onKeyEvent!(event);
+    }
+
+    return onKeyEvent(event);
+  }
+
+  @mustCallSuper
+  KeyEventResult onKeyEvent(KeyEvent event) {
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    if (widget.focusNode == null) {
+      _internalNode!.dispose();
+    } else {
+      _removeNodeListeners(widget.focusNode);
+    }
+  }
+}
+
+abstract class LnFormFieldState<T, CT>
+    extends ScopedEditablePropsWidgetState<LnFormField<T, CT>>
+    with
+        RestorationMixin<LnFormField<T, CT>>,
+        FieldLoggerMixin,
+        _FieldValidator<T, CT>,
+        _FormFieldControllerMixin<T, CT>,
+        _FieldFocusNode<T, CT> {
+  @override
+  T get value => controller.fieldValue;
+
+  bool get isEmpty => controller.isEmpty;
+
+  @override
+  String get loggerFieldName =>
+      widget.decoration?.label ?? widget.decoration?.hint ?? "";
+
+  @override
+  ValueValidator<T>? get validator => widget.validator;
+
+  late final FocusNode _editingActionButtonFocusNode = FocusNode(
+    skipTraversal: true,
+    canRequestFocus: false,
+  );
+
+  LnFormController? _subscribedForm;
+
+  TextStyle get baseStyle => theme.formFieldStyle.merge(widget.style);
+
+  final _hoverNotifier = ValueNotifier<bool>(false);
+  Listenable get hoverListenable => _hoverNotifier;
+  bool get hovered => _hoverNotifier.value;
+
+  MouseCursor? get mouseCursor => widget.mouseCursor;
+
+  InputDecoration? _computedDecoration;
+  InputDecoration? get computedDecoration => _computedDecoration;
+
+  @override
+  EditablePropsMixin? get editableScopeProps => _subscribedForm?.scopedState;
+
+  @override
+  void onComputedEditableStateChanged() {
+    rebuild();
+  }
+
+  Widget? buildActionButton(BuildContext context, FocusNode focusNode) {
+    final show = computedState.active &&
+        (UniversalPlatform.isDesktop || UniversalPlatform.isWeb
+            ? hovered
+            : focused);
+
+    if (show) {
+      if (computedState.restoreable && controller.unsaved) {
+        return InkWell(
+          focusNode: focusNode,
+          onTap: controller.restore,
+          child: const Icon(Icons.settings_backup_restore_rounded),
           //tooltip: S.current.restore,
         );
-      } else if (scopedState.clearable && !isEmpty) {
-        return IconButton(
-          icon: const Icon(Icons.clear_rounded),
-          focusNode: editingActionButtonFocusNode,
-          onPressed: () => setValue(null),
+      } else if (computedState.clearable && !controller.isEmpty) {
+        return InkWell(
+          focusNode: focusNode,
+          onTap: controller.clear,
+          child: const Icon(Icons.clear_rounded),
           //tooltip: S.current.clear,
         );
       }
@@ -122,362 +446,149 @@ class LnFormFieldState<T> extends State<LnFormField<T>> with RestorationMixin {
     return null;
   }
 
-  MouseCursor get effectiveMouseCursor => MouseCursor.defer;
+  @mustCallSuper
+  void onTap() {
+    log("handlers.onTap");
 
-  LnDecoration get baseDecoration => const LnDecoration();
-
-  InputDecoration? _effectiveDecoration;
-  InputDecoration get effectiveDecoration =>
-      _effectiveDecoration ??= _prepareDecorationForBuild();
-
-  InputDecoration _prepareDecorationForBuild() {
-    LnDecoration decorationBase = (widget.decoration ?? const LnDecoration())
-        .applyDefaults(baseDecoration);
-
-    if (scopedState.readOnly) {
-      decorationBase = decorationBase.apply(
-        hint: Wrapped(null),
-        counter: Wrapped(null),
-        suffixIcon: Wrapped(null),
-        error: Wrapped(null),
-        helper: Wrapped(null),
-      );
+    if (!_focused) {
+      requestFocus();
     }
-
-    InputDecoration decoration = decorationBase
-        .build()
-        .applyDefaults(Theme.of(context).inputDecorationTheme)
-        .copyWith(
-          prefixIconConstraints: const BoxConstraints(
-              minHeight: 36, minWidth: kMinInteractiveDimension),
-          suffixIconConstraints: const BoxConstraints(
-              minHeight: 36, minWidth: kMinInteractiveDimension),
-        );
-
-    if (scopedState.readOnly) {
-      decoration = decoration.copyWith(
-        floatingLabelBehavior: FloatingLabelBehavior.always,
-        contentPadding:
-            decoration.contentPadding?.at(context).copyWith(left: 0, right: 0),
-        filled: false,
-        border: decoration.readOnlyBorder,
-        errorBorder: decoration.readOnlyBorder,
-        enabledBorder: decoration.readOnlyBorder,
-        focusedBorder: decoration.readOnlyBorder,
-        disabledBorder: decoration.readOnlyBorder,
-        focusedErrorBorder: decoration.readOnlyBorder,
-      );
-    } else {
-      decoration = decoration.copyWith(
-        suffixIcon: editingActionButton ?? decoration.suffixIcon,
-        errorText: isPassed ? errorText : null,
-      );
+    if (widget.onTap != null) {
+      widget.onTap!();
     }
+  }
 
-    /*decoration = decoration.copyWith(
-      label: SpacedRow(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(child: decoration.label ?? Text(decoration.labelText ?? "")),
-          Container(
-            height: 10,
-            width: 10,
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              borderRadius: BorderRadius.circular(100),
-              boxShadow: [ElevationBoxShadow(1)],
-            ),
-          ),
-        ],
-      ),
-    );*/
-
-    return decoration;
+  @mustCallSuper
+  @override
+  void onFocusChanged(bool focused) {
+    log("handlers.onFocusChanged($focused)");
+    if (!focused) {
+      setPassed(true);
+    }
+    super.onFocusChanged(focused);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final form = _LnFormScope.maybeOf(context)?.._register(this);
-    final controller = form?.controller;
-
-    _scopedState = _InheritState(
-      enabled: widget.enabled ?? true && controller?.inProgress != true,
-      readOnly: widget.readOnly ?? false,
-      clearable: widget.clearable,
-      restoreable: widget.restoreable,
-    ).scope(controller?._inheritState);
-
-    if (!scopedState.active && effectiveFocusNode.hasFocus) {
-      effectiveFocusNode.unfocus();
-    }
-
-    _effectiveDecoration = null;
-    _validate();
-
-    Widget child = isEmpty && scopedState.readOnly
-        ? EmptyReadOnlyField(
-            color: Theme.of(context).hintColor,
-          )
-        : widget.builder(this) ?? const SizedBox();
-
-    child = DefaultTextStyle(
-      style: baseTextStyle,
-      child: child,
-    );
-
-    if (widget.absorbInsideTapEvents) {
-      child = AbsorbPointer(
-        child: child,
-      );
-    }
-
-    if (widget.decoration != null) {
-      InputDecoration decoration = effectiveDecoration;
-
-      child = AnimatedBuilder(
-        animation: effectiveFocusNode,
-        builder: (BuildContext context, Widget? child) {
-          return InputDecorator(
-            textAlignVertical: TextAlignVertical.center,
-            decoration: decoration,
-            baseStyle: baseTextStyle,
-            isHovering: isHovering,
-            isFocused: isFocused,
-            isEmpty: isEmpty,
-            child: child,
-          );
-        },
-        child: child,
-      );
-    }
-
-    child = Opacity(
-      opacity: scopedState.enabled ? 1 : 0.5,
-      child: child,
-    );
-
-    if (widget.handleTapOutsideWhenFocused) {
-      child = TapRegion(
-        enabled: effectiveFocusNode.hasFocus,
-        onTapOutside: (_) => handleTapOutside(),
-        behavior: HitTestBehavior.opaque,
-        debugLabel: 'InputFormField',
-        child: child,
-      );
-    }
-
-    child = MouseRegion(
-      cursor: effectiveMouseCursor,
-      onEnter: (_) => scopedState.active ? handleHover(true) : null,
-      onExit: (_) =>
-          scopedState.active || isHovering ? handleHover(false) : null,
-      child: child,
-    );
-
-    child = Focus(
-      canRequestFocus: scopedState.active,
-      skipTraversal: widget.useFocusNode ? null : true,
-      focusNode: widget.useFocusNode ? effectiveFocusNode : null,
-      //parentNode: useFocusNode ? null : state.effectiveFocusNode,
-      onFocusChange: handleFocusChanged,
-      onKeyEvent: (node, event) => effectiveFocusNode.hasFocus
-          ? handleKeyEvent(event)
-          : KeyEventResult.ignored,
-      child: child,
-    );
-
-    child = GestureDetector(
-      onTap: () => scopedState.active ? handleTap() : null,
-      child: child,
-    );
-
-    return child;
+  void _handleControllerChanged() {
+    super._handleControllerChanged();
+    _subscribedForm?.handleFieldValueChanged();
   }
 
-  void _createInternalFocusNode() {
-    assert(_internalNode == null);
-    _internalNode = FocusNode();
-  }
-
-  void rebuild() {
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  Future<void> ensureVisible() async {
-    final scrollablePosition = Scrollable.maybeOf(context)?.position;
-    if (scrollablePosition != null) {
-      await context.findRenderObject()?.ensureVisible(scrollablePosition);
+  FutureOr<void> ensureVisible() {
+    final scrollPosition = Scrollable.maybeOf(context)?.position;
+    if (scrollPosition != null) {
+      context.findRenderObject()?.ensureVisible(scrollPosition);
     }
-  }
-
-  @override
-  void initState() {
-    _log("initState");
-    super.initState();
-
-    _stateInitialValue = widget.initialValue;
-
-    if (widget.focusNode == null) {
-      _createInternalFocusNode();
-    }
-
-    /*effectiveFocusNode
-      ..canRequestFocus = isActive
-      ..addListener(_focusChangeListener)
-      ..onKeyEvent = (node, event) =>
-          (isActive ? handleKeyEvent(event) : KeyEventResult.ignored);*/
-  }
-
-  @override
-  void didUpdateWidget(LnFormField<T> oldWidget) {
-    _log("didUpdateWidget");
-    super.didUpdateWidget(oldWidget);
-    if (widget.focusNode != oldWidget.focusNode) {
-      //unsyncFocusNode(oldWidget.focusNode);
-
-      if (widget.focusNode == null) {
-        _createInternalFocusNode();
-      }
-
-      //syncFocusNode(effectiveFocusNode);
-    }
-
-    /*if (oldWidget.initialValue != widget.initialValue) {
-      setValue(widget.initialValue);
-    }*/
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    if (widget.initialValue != _stateInitialValue) {
-      _log("didChangeDependencies -> initialValueChanged: "
-          "${widget.initialValue?.toString().limitLength(30)}->"
-          "${_stateInitialValue?.toString().limitLength(30)}");
-    } else {
-      _log("didChangeDependencies");
+    final form = LnForm.maybeOf(context);
+    if (form != _subscribedForm) {
+      _subscribedForm?._unregister(this);
+      _subscribedForm = form?.._register(this);
+      notifyEditableScopePropsChanged();
     }
-  }
-
-  @override
-  void deactivate() {
-    _LnFormScope.maybeOf(context)?._unregister(this);
-    super.deactivate();
   }
 
   @override
   void dispose() {
-    _log("dispose");
-    _internalNode?.dispose();
-    _editingActionButtonFocusNode?.dispose();
+    _subscribedForm?._unregister(this);
+    _editingActionButtonFocusNode.dispose();
     super.dispose();
   }
 
-  /*void _focusChangeListener() {
-    handleFocusChanged(effectiveFocusNode.hasFocus);
-  }*/
+  void _computeDecoration() {
+    final actionButton = buildActionButton(
+      context,
+      _editingActionButtonFocusNode,
+    );
 
-  void setValue(T? value) {
-    if (this.value != value) {
-      _log("setValue: $value");
-      _value = value;
-      rebuild();
-      _LnFormScope.maybeOf(context)?._fieldDidChange();
-      if (widget.onChanged != null) widget.onChanged!(value);
+    InputDecoration? decoration =
+        widget.decoration?.build().applyDefaults(theme.inputDecorationTheme);
+
+    if (actionButton != null || errorText != null) {
+      decoration = decoration?.copyWith(
+        suffixIcon: const Icon(Icons.clear_rounded),
+        errorText: errorText,
+      );
     }
+
+    _computedDecoration =
+        decoration?.copyWith(suffixIcon: const Icon(Icons.clear_rounded));
   }
 
-  @mustCallSuper
-  void handleFocusChanged(bool hasFocus) {
-    _log("handler -> focusChange: $hasFocus");
+  @override
+  void logEditableProps() {
+    log("EditableProps ----------------------------------");
+    super.logEditableProps();
+  }
 
-    if (hasFocus) {
-      _focusedBefore = true;
-    } else if (_focusedBefore) {
-      if (!isFocused) {
-        _isPassed = true;
-      }
+  @override
+  Widget build(BuildContext context) {
+    Widget result = ListenableBuilder(
+      listenable: Listenable.merge([
+        controller,
+        focusListenable,
+        hoverListenable,
+        errorListenable,
+      ]),
+      builder: (context, child) {
+        if (!computedState.active && hovered) {
+          _hoverNotifier.value = false;
+        }
+        effectiveFocusNode.canRequestFocus = computedState.active;
+
+        _computeDecoration();
+
+        return LnFormFieldDecorator(
+          enabled: computedState.enabled,
+          readOnly: computedState.readOnly,
+          focused: focused,
+          hovered: hovered,
+          empty: controller.isEmpty,
+          decoration: computedDecoration,
+          baseTextStyle: baseStyle,
+          child: widget.builder(this, computedState),
+        );
+      },
+    );
+
+    if (!widget.disableGestures) {
+      result = LnFormFieldGestures(
+        active: computedState.active,
+        mouseCursor: mouseCursor,
+        focusNode: widget.useFocusNode ? effectiveFocusNode : null,
+        autofocus: widget.autofocus,
+        onTap: onTap,
+        onPointerEnter: (event) {
+          _hoverNotifier.value = true;
+          if (widget.onPointerEnter != null) {
+            widget.onPointerEnter!(event);
+          }
+        },
+        onPointerExit: (event) {
+          _hoverNotifier.value = false;
+          if (widget.onPointerExit != null) {
+            widget.onPointerExit!(event);
+          }
+        },
+        child: result,
+      );
     }
-    rebuild();
+
+    return result;
   }
+}
 
-  @mustCallSuper
-  KeyEventResult handleKeyEvent(KeyEvent event) {
-    assert(effectiveFocusNode.hasFocus);
-    _log(
-        "handler -> onKeyEvent(${event.runtimeType}): ${event.logicalKey.keyLabel}");
+class LnSimpleFieldState<T> extends LnFormFieldState<T, T> {
+  @override
+  LnSimpleField<T> get widget => super.widget as LnSimpleField<T>;
 
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.escape) {
-      effectiveFocusNode.unfocus();
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
-
-  @mustCallSuper
-  void handleTap() {
-    assert(scopedState.active);
-    _log("handler -> tap");
-  }
-
-  @mustCallSuper
-  void handleTapOutside() {
-    assert(scopedState.active && effectiveFocusNode.hasFocus);
-    _log("handler -> tapOutside");
-    if (widget.unfocusWhenTapOutside) {
-      effectiveFocusNode.unfocus();
-    }
-  }
-
-  @mustCallSuper
-  void handleHover(bool hovering) {
-    assert(scopedState.active || (_isHovering && !hovering));
-    if (hovering == _isHovering) return;
-    _log("handler -> hover: $hovering");
-
-    _isHovering = hovering;
-    rebuild();
-  }
-
-  void _validate() {
-    _log("validate");
-    if (widget.validator != null) {
-      _errorText.value = widget.validator!(_value);
-    }
-  }
-
-  @mustCallSuper
-  bool validate() {
-    _isPassed = true;
-    _validate();
-    rebuild();
-    return !hasError;
-  }
-
-  void reset() {
-    _log("reset: $value => $_stateInitialValue");
-
-    _isPassed = false;
-    _focusedBefore = false;
-    setValue(_stateInitialValue);
-  }
-
-  void save() {
-    _log("save: $_stateInitialValue => $value");
-    _stateInitialValue = value;
-    widget.onSaved?.call(value);
-  }
-
-  void _log(String functionName) {
-    if (kLoggingEnabled) {
-      final fieldType = "$widget.runtimeType".split("FormField").first;
-      final fieldName =
-          widget.decoration?.label ?? widget.decoration?.hint ?? "";
-
-      FormLog.d(fieldType, functionName, 1, fieldName: fieldName);
-    }
+  @override
+  FieldController<T> createController(T value) {
+    return FieldController<T>(value, emptyValue: widget.emptyValue);
   }
 }

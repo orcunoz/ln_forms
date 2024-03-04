@@ -9,7 +9,7 @@ class FormLog {
   static d(String fieldType, String functionName, int fieldLevel,
       {required String? fieldName}) {
     assert(fieldLevel >= 1);
-    String? fieldNameLine = fieldName?.pascalCase.toFixed(20, fillChar: "_");
+    String? fieldNameLine = fieldName?.pascalCase.toFixed(16, fillChar: "_");
     fieldNameLine = fieldNameLine == null ? '' : "[$fieldNameLine]";
     String fieldTypeStr =
         fieldLevel == 1 ? fieldType.toFixed(8, fillChar: "_") : fieldType;
@@ -22,13 +22,13 @@ class FormLog {
   static e(dynamic errorOrMessage, {StackTrace? stackTrace}) {
     Error? error = errorOrMessage is Error ? errorOrMessage : null;
 
-    _logger.e(errorOrMessage, error);
+    _logger.e(errorOrMessage, error: error);
     if (stackTrace != null) {
-      _logger.e(errorOrMessage, error, stackTrace);
+      _logger.e(errorOrMessage, error: error, stackTrace: stackTrace);
     }
   }
 
-  static wtf(dynamic message) {
-    _logger.wtf("WTF!.$message");
+  static f(dynamic message) {
+    _logger.f("Fatal!.$message");
   }
 }

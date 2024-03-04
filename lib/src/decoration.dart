@@ -1,15 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ln_core/ln_core.dart';
 
-class _NullWidget extends Widget {
-  const _NullWidget();
-
-  @override
-  Element createElement() {
-    throw Exception("This widget should never create!");
-  }
-}
-
 class LnDecoration {
   final String? label;
   final String? hint;
@@ -20,7 +11,9 @@ class LnDecoration {
   final String? counter;
   final String? error;
 
-  static const nullImportant = _NullWidget();
+  static const nullImportant = UnusableWidget(
+    invalidUsageMessage: "This widget should never create!",
+  );
 
   const LnDecoration({
     this.label,
@@ -86,7 +79,7 @@ class LnDecoration {
       prefixIcon: prefixIcon == null ? this.prefixIcon : prefixIcon.value,
       suffixIcon: suffixIcon == null ? this.suffixIcon : suffixIcon.value,
       counter: counter == null ? this.counter : counter.value,
-      error: error?.value ?? this.error,
+      error: error == null ? this.error : error.value,
     );
   }
 
@@ -96,8 +89,8 @@ class LnDecoration {
       hintText: hint,
       helperText: helper,
       prefixText: prefixText,
-      prefixIcon: prefixIcon is _NullWidget ? null : prefixIcon,
-      suffixIcon: suffixIcon is _NullWidget ? null : suffixIcon,
+      prefixIcon: prefixIcon == nullImportant ? null : prefixIcon,
+      suffixIcon: suffixIcon == nullImportant ? null : suffixIcon,
       counterText: counter,
       errorText: error,
     );

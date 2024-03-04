@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:ln_core/ln_core.dart';
 
 typedef NodeGenerator = FocusNode Function(int index);
 
@@ -29,32 +29,68 @@ extension FocusNodeIterableExtensions on Iterable<FocusNode> {
   }
 }
 
-extension RenderObjectExtensions on RenderObject {
-  Future<void> ensureVisible(
-    ScrollPosition scrollPosition, {
-    Duration duration = const Duration(milliseconds: 100),
-    Curve curve = Curves.easeIn,
+extension InputDecorationExtensions on InputDecoration {
+  InputDecoration apply({
+    Wrapped<String?>? label,
+    Wrapped<String?>? hint,
+    Wrapped<String?>? helper,
+    Wrapped<String?>? prefixText,
+    Wrapped<Widget?>? prefixIcon,
+    Wrapped<Widget?>? suffixIcon,
+    Wrapped<String?>? counter,
+    Wrapped<String?>? error,
   }) {
-    final viewport = RenderAbstractViewport.of(this);
-
-    late double alignment;
-
-    if (scrollPosition.pixels > viewport.getOffsetToReveal(this, 0.0).offset) {
-      // Move down to the top of the viewport
-      alignment = 0.0;
-    } else if (scrollPosition.pixels <
-        viewport.getOffsetToReveal(this, 1.0).offset) {
-      // Move up to the bottom of the viewport
-      alignment = 1.0;
-    } else {
-      return Future.value(null);
-    }
-
-    return scrollPosition.ensureVisible(
-      this,
-      alignment: alignment,
-      duration: duration,
-      curve: curve,
+    return InputDecoration(
+      icon: icon,
+      iconColor: iconColor,
+      label: this.label,
+      labelText: label == null ? labelText : label.value,
+      labelStyle: labelStyle,
+      floatingLabelStyle: floatingLabelStyle,
+      helperText: helper == null ? helperText : helper.value,
+      helperStyle: helperStyle,
+      helperMaxLines: helperMaxLines,
+      hintText: hint == null ? hintText : hint.value,
+      hintStyle: hintStyle,
+      hintTextDirection: hintTextDirection,
+      hintMaxLines: hintMaxLines,
+      errorText: error == null ? errorText : error.value,
+      errorStyle: errorStyle,
+      errorMaxLines: errorMaxLines,
+      floatingLabelBehavior: floatingLabelBehavior,
+      floatingLabelAlignment: floatingLabelAlignment,
+      isCollapsed: isCollapsed,
+      isDense: isDense,
+      contentPadding: contentPadding,
+      prefixIcon: prefixIcon == null ? this.prefixIcon : prefixIcon.value,
+      prefixIconConstraints: prefixIconConstraints,
+      prefix: prefix,
+      prefixText: prefixText == null ? this.prefixText : prefixText.value,
+      prefixStyle: prefixStyle,
+      prefixIconColor: prefixIconColor,
+      suffixIcon: suffixIcon == null ? this.suffixIcon : suffixIcon.value,
+      suffix: suffix,
+      suffixText: suffixText,
+      suffixStyle: suffixStyle,
+      suffixIconColor: suffixIconColor,
+      suffixIconConstraints: suffixIconConstraints,
+      counter: this.counter,
+      counterText: counter == null ? counterText : counter.value,
+      counterStyle: counterStyle,
+      filled: filled,
+      fillColor: fillColor,
+      focusColor: focusColor,
+      hoverColor: hoverColor,
+      errorBorder: errorBorder,
+      focusedBorder: focusedBorder,
+      focusedErrorBorder: focusedErrorBorder,
+      disabledBorder: disabledBorder,
+      enabledBorder: enabledBorder,
+      border: border,
+      enabled: enabled,
+      semanticCounterText: semanticCounterText,
+      alignLabelWithHint: alignLabelWithHint,
+      constraints: constraints,
     );
   }
 }

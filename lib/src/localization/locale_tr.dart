@@ -99,4 +99,7 @@ class LnFormsLocaleTr extends LnFormsLocalizations {
 
   @override
   String get mobileNumberIsInvalid => "Telefon numarası geçersiz";
+
+  @override
+  String get unsaved => "KAYDEDİLMEDİ";
 }

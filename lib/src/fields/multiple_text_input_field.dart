@@ -2,25 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
+import 'package:ln_forms/src/editable_scope.dart';
 import 'package:ln_forms/src/utilities/extensions.dart';
 
 enum LetterCase { normal, small, capital }
 
-class MultipleTextInputFormField extends LnFormField<List<String>> {
-  final String? Function(String)? validateItem;
-  final List<String> textSeparators;
-  final LetterCase letterCase;
-  final double minContentHeight;
-  final TextInputFormatter? inputFormatter;
-  final bool uniqueItems;
-  final void Function()? onSubmitted;
-  final String? prefixText;
-  final TextInputType keyboardType;
-
-  MultipleTextInputFormField.autoSeparate({
+class MultipleTextInputField extends LnSimpleField<List<String>> {
+  MultipleTextInputField.autoSeparate({
     super.key,
     required String separator,
-    String? initialValue,
+    String? value,
     void Function(String?)? onChanged,
     super.onSaved,
     super.enabled,
@@ -44,9 +35,9 @@ class MultipleTextInputFormField extends LnFormField<List<String>> {
             ? textSeparators
             : [separator, ...textSeparators]),
         super(
-          initialValue: _autoSplit(initialValue, separator),
+          value: _autoSplit(value, separator),
+          controller: null,
           useFocusNode: false,
-          absorbInsideTapEvents: false,
           decoration: decoration?.apply(prefixText: const Wrapped(null)),
           onChanged: onChanged == null
               ? null
@@ -54,13 +45,16 @@ class MultipleTextInputFormField extends LnFormField<List<String>> {
           validator: validator == null
               ? null
               : (val) => validator(_autoJoin(val, separator)),
-          builder: (LnFormFieldState<List<String>> field) =>
-              (field as MultipleTextInputFormFieldState)._buildInside(),
+          builder: (field, scopeProps) {
+            field as _MultipleTextInputFieldState;
+            return field._buildInside(scopeProps);
+          },
+          emptyValue: [],
         );
 
-  MultipleTextInputFormField({
+  MultipleTextInputField({
     super.key,
-    super.initialValue = const [],
+    super.value = const [],
     super.onChanged,
     super.onSaved,
     super.focusNode,
@@ -82,29 +76,42 @@ class MultipleTextInputFormField extends LnFormField<List<String>> {
   })  : prefixText = decoration?.prefixText,
         super(
           useFocusNode: false,
-          absorbInsideTapEvents: false,
-          decoration: decoration?.apply(prefixText: const Wrapped(null)),
-          builder: (LnFormFieldState<List<String>> field) =>
-              (field as MultipleTextInputFormFieldState)._buildInside(),
+          controller: null,
+          decoration: decoration
+              ?.copyWith(suffixIcon: const Icon(Icons.storage_rounded))
+              .apply(prefixText: const Wrapped(null)),
+          builder: (field, computedState) =>
+              (field as _MultipleTextInputFieldState)
+                  ._buildInside(computedState),
+          emptyValue: [],
         );
 
-  static List<String> _autoSplit(String? strValue, String seperator) {
-    return strValue?.isNotEmpty == true ? strValue!.split(seperator) : [];
+  final String? Function(String)? validateItem;
+  final List<String> textSeparators;
+  final LetterCase letterCase;
+  final double minContentHeight;
+  final TextInputFormatter? inputFormatter;
+  final bool uniqueItems;
+  final void Function()? onSubmitted;
+  final String? prefixText;
+  final TextInputType keyboardType;
+
+  static List<String> _autoSplit(String? strValue, String separator) {
+    return strValue?.isNotEmpty == true ? strValue!.split(separator) : [];
   }
 
-  static String? _autoJoin(List<String>? listValue, String seperator) {
-    return listValue?.isNotEmpty == true ? listValue!.join(seperator) : null;
+  static String? _autoJoin(List<String>? listValue, String separator) {
+    return listValue?.isNotEmpty == true ? listValue!.join(separator) : null;
   }
 
   @override
-  MultipleTextInputFormFieldState createState() {
-    return MultipleTextInputFormFieldState();
+  LnSimpleFieldState<List<String>> createState() {
+    return _MultipleTextInputFieldState();
   }
 }
 
-class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
-  late final TextEditingController _textEditingController =
-      TextEditingController();
+class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
+  late final _textEditingController = TextEditingController();
 
   final List<FocusNode> _removeIconfocusNodes = [];
   List<FocusNode> get removeIconFocusNodes => _removeIconfocusNodes
@@ -112,25 +119,16 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
         (_) => FocusNode(skipTraversal: true, canRequestFocus: false));
 
   @override
-  MultipleTextInputFormField get widget =>
-      super.widget as MultipleTextInputFormField;
-
-  @override
-  LnDecoration get baseDecoration => super.baseDecoration.copyWith(
-        suffixIcon: const Icon(Icons.storage_rounded),
-      );
+  MultipleTextInputField get widget => super.widget as MultipleTextInputField;
 
   final Key _editableTextWidgetKey = GlobalKey(debugLabel: 'inputText');
   bool _hintActive = false;
 
   @override
-  bool get isEmpty => super.isEmpty && _textEditingController.text.isEmpty;
+  bool get isEmpty => value.isEmpty && _textEditingController.text.isEmpty;
 
   @override
-  List<String> get value => super.value ?? [];
-
-  @override
-  void handleFocusChanged(bool hasFocus) {
+  void onFocusChanged(bool hasFocus) {
     _hintActive = false;
 
     if (!hasFocus) {
@@ -139,15 +137,13 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
         _textEditingController.clear();
       }
       _addItemIfValid(editingText);
-    } else {
-      rebuild();
     }
 
-    super.handleFocusChanged(hasFocus);
+    super.onFocusChanged(hasFocus);
   }
 
   @override
-  KeyEventResult handleKeyEvent(KeyEvent event) {
+  KeyEventResult onKeyEvent(KeyEvent event) {
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       if (_addItemIfValid(_textEditingController.text)) {
         _textEditingController.clear();
@@ -155,16 +151,7 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
       return KeyEventResult.handled;
     }
 
-    return super.handleKeyEvent(event);
-  }
-
-  @override
-  void handleTap() {
-    super.handleTap();
-
-    if (!effectiveFocusNode.hasFocus) {
-      effectiveFocusNode.requestFocus();
-    }
+    return super.onKeyEvent(event);
   }
 
   void _onEditingTextChanged(String editingText) {
@@ -215,22 +202,17 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
 
   bool _addItemIfValid(String tag) {
     if (tag.isNotEmpty && _validateItem(tag) == null) {
-      setValue((value..add(tag)).toList());
+      controller.value = (value..add(tag)).toList();
       return true;
     }
     return false;
   }
 
-  Widget buildItem(int itemIndex, double maxWidth, TextStyle itemTextStyle,
-      Color itemBackgroundColor) {
-    final ThemeData theme = Theme.of(context);
-
-    final borderColor = scopedState.readOnly
-        ? theme.dividerColor.blend(theme.colorScheme.background, 50)
-        : theme.dividerColor;
-    itemBackgroundColor = scopedState.readOnly
-        ? itemBackgroundColor.blend(theme.colorScheme.background, 50)
-        : itemBackgroundColor;
+  Widget buildItem(int itemIndex, ComputedEditableProps computedState,
+      double maxWidth, TextStyle textStyle, Color backgroundColor) {
+    backgroundColor = computedState.readOnly
+        ? backgroundColor.blend(backgroundColor.onColor, 50)
+        : backgroundColor;
 
     const removeIconSize = 18.0;
     const removeIconPadding =
@@ -239,38 +221,39 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
     final itemTextMaximumWidth =
         maxWidth - leftPadding - removeIconSize - removeIconPadding.horizontal;
 
-    return Material(
-      color: itemBackgroundColor,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(width: 0.5, color: borderColor),
-        borderRadius: theme.inputDecorationTheme.enabledBorder?.borderRadius ??
-            BorderRadius.zero,
-      ),
-      child: Container(
-        height: removeIconSize + removeIconPadding.vertical,
-        constraints: BoxConstraints(
-          maxWidth: maxWidth,
+    return Stack(
+      children: [
+        Positioned.fill(
+          top: 4,
+          bottom: 4,
+          right: 6,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              border: Border.all(width: 0.5, color: backgroundColor),
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         ),
-        padding: const EdgeInsets.only(left: leftPadding),
-        child: Row(
+        Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
+            SizedBox(width: 8),
+            ConstrainedBox(
               constraints: BoxConstraints(maxWidth: itemTextMaximumWidth),
               child: Text(
                 value[itemIndex],
-                style: itemTextStyle,
+                style: textStyle,
                 overflow: TextOverflow.fade,
               ),
             ),
-            if (scopedState.active)
+            if (computedState.active)
               IconButton(
                 constraints: BoxConstraints.tightFor(
-                  width: removeIconSize + removeIconPadding.vertical,
-                  height: removeIconSize + removeIconPadding.vertical,
+                  width: 42,
+                  height: 42,
                 ),
                 visualDensity: VisualDensity.comfortable,
                 padding: EdgeInsets.zero,
@@ -279,9 +262,9 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
                   size: removeIconSize,
                   color: theme.hintColor,
                 ),
-                color: itemTextStyle.color,
+                color: textStyle.color,
                 onPressed: () =>
-                    setValue((value..removeAt(itemIndex)).toList()),
+                    controller.value = (value..removeAt(itemIndex)).toList(),
                 focusNode: removeIconFocusNodes[itemIndex],
                 style: const ButtonStyle(
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -291,15 +274,14 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
               const SizedBox(width: leftPadding)
           ],
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildInside() {
-    final ThemeData theme = Theme.of(context);
-
-    final itemBackgroundColor = theme.highlightColor;
-    final itemTextStyle = baseTextStyle.apply(fontSizeFactor: 0.9);
+  Widget _buildInside(ComputedEditableProps computedState) {
+    final itemBackgroundColor = theme.hintColor.withOpacity(.06);
+    final style = baseStyle;
+    final itemStyle = style.apply(fontSizeFactor: 0.9);
 
     Widget editorSide = EditableText(
       key: _editableTextWidgetKey,
@@ -320,10 +302,10 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
       },
       onChanged: _onEditingTextChanged,
       cursorColor: theme.textSelectionTheme.cursorColor ??
-          itemTextStyle.color ??
+          style.color ??
           itemBackgroundColor.onColor,
       backgroundCursorColor: itemBackgroundColor,
-      style: baseTextStyle,
+      style: style,
     );
 
     if (widget.prefixText != null) {
@@ -336,7 +318,7 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
             padding: const EdgeInsets.only(top: 1.0),
             child: Text(
               widget.prefixText!,
-              style: baseTextStyle,
+              style: style,
             ),
           ),
           Expanded(child: editorSide),
@@ -351,22 +333,27 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
         children: [
           Container(
             constraints: BoxConstraints(
-              minHeight: scopedState.readOnly ? 0 : widget.minContentHeight,
+              minHeight: computedState.readOnly ? 0 : widget.minContentHeight,
             ),
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
-              runSpacing: 4,
-              spacing: 4,
+              runSpacing: 2,
+              spacing: 2,
               children: [
                 for (var i = 0; i < value.length; i++)
-                  buildItem(i, constraints.maxWidth, itemTextStyle,
-                      itemBackgroundColor),
+                  buildItem(
+                    i,
+                    computedState,
+                    constraints.maxWidth,
+                    itemStyle,
+                    itemBackgroundColor,
+                  ),
               ],
             ),
           ),
           Container(
             width: effectiveFocusNode.hasFocus ? constraints.maxWidth : 0,
-            height: scopedState.readOnly ? 0 : null,
+            height: computedState.readOnly ? 0 : null,
             alignment: Alignment.bottomLeft,
             child: editorSide,
           ),
@@ -381,5 +368,10 @@ class MultipleTextInputFormFieldState extends LnFormFieldState<List<String>> {
       focusNode.dispose();
     }
     super.dispose();
+  }
+
+  @override
+  FieldController<List<String>> createController(List<String> value) {
+    return ListFieldController<String>(value);
   }
 }
