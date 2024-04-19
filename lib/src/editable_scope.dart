@@ -151,7 +151,9 @@ abstract class EditablePropsWidget extends StatefulWidget
 }
 
 abstract class ScopedEditablePropsWidgetState<W extends EditablePropsWidget>
-    extends LnState<W> with EditablePropsRef, ComputedEditableStateMixin {
+    extends LnState<W>
+    with ComputedEditableStateMixin
+    implements EditablePropsRef {
   @override
   EditablePropsMixin get _editableProps => widget;
   @override
@@ -189,8 +191,14 @@ abstract class EditableScopeWidgetEditableState<W extends EditablePropsWidget>
   EditablePropsMixin? get _editableScopeProps => mounted ? widget : null;
 
   @override
-  void onScopedEditableStateChanged() {
-    super.onScopedEditableStateChanged();
+  @mustCallSuper
+  void didScopedEditableStateChanged() {
+    super.didScopedEditableStateChanged();
+  }
+
+  @override
+  void didComputedEditableStateChanged() {
+    super.didComputedEditableStateChanged();
     rebuild();
   }
 
@@ -219,6 +227,19 @@ mixin ComputedEditableStateMixin
   late ComputedEditableProps _computedState = scopedState.computed();
   ComputedEditableProps get computedState => _computedState;
 
+  @mustCallSuper
+  void didScopedEditableStateChanged() {
+    //rebuild();
+    final newComputedState = scopedState.computed();
+    if (!computedState.isEditablePropsEquals(newComputedState)) {
+      _computedState = newComputedState;
+      didComputedEditableStateChanged();
+    }
+  }
+
+  @mustCallSuper
+  void didComputedEditableStateChanged() {}
+
   @override
   @mustCallSuper
   void notifyEditablePropsChanged() {
@@ -231,22 +252,11 @@ mixin ComputedEditableStateMixin
     _computeState();
   }
 
-  @mustCallSuper
-  void onScopedEditableStateChanged() {
-    final newComputedState = scopedState.computed();
-    if (!newComputedState.isEditablePropsEquals(computedState)) {
-      _computedState = newComputedState;
-      onComputedEditableStateChanged();
-    }
-  }
-
-  void onComputedEditableStateChanged();
-
   void _computeState() {
     final newScopedState = _editableProps.scoped(_editableScopeProps);
     if (!scopedState.isEditablePropsEquals(newScopedState)) {
       _scopedState = newScopedState;
-      onScopedEditableStateChanged();
+      didScopedEditableStateChanged();
     }
   }
 
@@ -280,12 +290,12 @@ mixin EditableStateMixin implements EditablePropsRef {
       _setProps(_editableProps.copyWith(restoreable: (val,)));
 }
 
-mixin EditableScopePropsRef {
+abstract class EditableScopePropsRef {
   EditablePropsMixin? get _editableScopeProps;
   void notifyEditableScopePropsChanged();
 }
 
-mixin EditablePropsRef {
+abstract class EditablePropsRef {
   EditablePropsMixin get _editableProps;
   void notifyEditablePropsChanged();
 }

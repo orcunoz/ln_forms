@@ -682,7 +682,7 @@ class _MenuItem<T> extends SingleChildRenderObjectWidget {
   }) : super(child: builder(""));
 
   final ValueChanged<Size> onLayout;
-  final String label;
+  final String? label;
   final T value;
   final Widget Function(String searchText) builder;
 
@@ -765,7 +765,8 @@ class DropdownButton<T> extends StatefulWidget {
     Widget Function(BuildContext, Widget)? frameBuilder,
     DropdownPosition? position,
     TextStyle? itemTextStyle,
-    required String Function(T) itemLabelBuilder,
+    String Function(T)? itemLabelBuilder,
+    Widget Function(T)? itemBuilder,
     required AlignmentGeometry itemAlignment,
     required EdgeInsets itemPadding,
     required CapturedThemes capturedThemes,
@@ -815,7 +816,8 @@ class DropdownButton<T> extends StatefulWidget {
             item: item,
             alignment: itemAlignment,
             padding: itemPadding,
-            label: itemLabelBuilder(item),
+            label: itemLabelBuilder?.call(item),
+            child: itemBuilder?.call(item),
             style: itemTextStyle ?? theme.formFieldStyle,
             backgroundColor: selectedIndex == index ? selectedColor : null,
             onLayout: (Size size) => route.itemHeights[index] = size.height,
@@ -858,20 +860,23 @@ class DropdownButton<T> extends StatefulWidget {
   static Widget Function(String) _itemBuilder<T>({
     required AlignmentGeometry alignment,
     required EdgeInsets padding,
-    required String label,
+    String? label,
+    Widget? child,
     required Color? backgroundColor,
     required TextStyle style,
   }) =>
       (highlightedText) {
+        assert(child != null || label != null);
         Widget result = Align(
           alignment: alignment,
           child: Padding(
             padding: padding,
-            child: HighlightedText(
-              label,
-              highlightedText: highlightedText,
-              style: style,
-            ),
+            child: child ??
+                HighlightedText(
+                  label!,
+                  highlightedText: highlightedText,
+                  style: style,
+                ),
           ),
         );
 
@@ -888,18 +893,20 @@ class DropdownButton<T> extends StatefulWidget {
     required void Function(Size) onLayout,
     required AlignmentGeometry alignment,
     required EdgeInsets padding,
-    required String label,
+    String? label,
+    Widget? child,
     required TextStyle style,
     required Color? backgroundColor,
   }) {
     return _MenuItem<Value<T>>(
-      label: label,
       value: Value<T>(item),
+      label: label,
       onLayout: onLayout,
       builder: _itemBuilder(
         alignment: alignment,
         padding: padding,
         label: label,
+        child: child,
         style: style,
         backgroundColor: backgroundColor,
       ),
@@ -919,7 +926,8 @@ class DropdownButton<T> extends StatefulWidget {
     TextStyle? itemStyle,
     AlignmentGeometry itemAlignment = Alignment.centerLeft,
     EdgeInsets itemPadding = const EdgeInsets.all(12),
-    required String Function(T) itemLabelBuilder,
+    String Function(T)? itemLabelBuilder,
+    Widget Function(T)? itemBuilder,
     RenderBox? buttonRenderBox,
     EdgeInsets? menuScreenInsets,
     EdgeInsets? menuMargin,
@@ -936,6 +944,7 @@ class DropdownButton<T> extends StatefulWidget {
       itemPadding: itemPadding,
       itemAlignment: itemAlignment,
       itemLabelBuilder: itemLabelBuilder,
+      itemBuilder: itemBuilder,
       targetRenderBox: buttonRenderBox,
       screenInsets: menuScreenInsets,
       margin: menuMargin,

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class BottomNotifierScrollController extends OverlimitScrollController {
   BottomNotifierScrollController() : super(keepScrollOffset: true) {
     addListener(() {
-      _atTheBottomNotifier.value = position.maxScrollExtent - offset < 20;
+      _atTheBottomNotifier.value = position.maxScrollExtent - offset == 0;
     });
   }
 

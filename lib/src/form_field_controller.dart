@@ -58,9 +58,17 @@ mixin FieldControllerMixin<T> implements ValueNotifier<T> {
   final didSave = ChangeNotifier();
 
   @mustCallSuper
+  void save() {
+    Log.i("ListFormFieldController.save");
+    _savedValue = value;
+    didSave.notifyListeners();
+  }
+
+  @mustCallSuper
   void restore() {
     Log.i("ListFormFieldController.restore");
     value = _savedValue;
+    didRestore.notifyListeners();
   }
 
   @mustCallSuper
@@ -68,12 +76,14 @@ mixin FieldControllerMixin<T> implements ValueNotifier<T> {
     Log.i("ListFormFieldController.clear");
     if (emptyValue is T) {
       value = emptyValue as T;
+      didClear.notifyListeners();
     }
   }
 
-  @mustCallSuper
-  void save() {
-    Log.i("ListFormFieldController.save");
-    _savedValue = value;
+  @override
+  void dispose() {
+    didSave.dispose();
+    didClear.dispose();
+    didRestore.dispose();
   }
 }

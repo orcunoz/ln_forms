@@ -9,7 +9,6 @@ import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
 import 'package:ln_forms/src/form_field_decorator.dart';
 import 'package:ln_forms/src/utilities/logger.dart';
-import 'package:universal_platform/universal_platform.dart';
 
 import 'editable_scope.dart';
 import 'form_actions.dart';
@@ -24,8 +23,6 @@ part 'unsaved_forms_observer.dart';
 
 enum FormModes { view, edit }
 
-typedef WrapperBuilder = Widget Function(BuildContext context, Widget child);
-
 enum AutovalidateMode {
   disabled,
   alwaysAfterFirst,
@@ -35,60 +32,40 @@ enum AutovalidateMode {
 class LnForm<R> extends EditablePropsWidget
     implements UnsavedChangesNotifiableWidget {
   LnForm({
+    super.key,
     super.enabled,
     super.readOnly,
     super.clearable,
     super.restoreable,
-    this.notifyProgressState = false,
-    this.notifySuccessAlerts = false,
-    this.notifyErrorAlerts = false,
     this.onChanged,
     this.autovalidateMode = AutovalidateMode.alwaysAfterFirst,
     required this.child,
-    this.wrapperBuilder,
-    //this.scrollable = true,
-    this.controller,
     this.showUnsavedChangesMark = false,
     this.notifyUnsavedChanges = false,
     this.onSubmit,
-    this.onError,
-  }) : super(key: ValueKey(controller));
+  });
 
   final VoidCallback? onChanged;
-
-  final FutureOr<R> Function(LnFormController<R>)? onSubmit;
-  final void Function(LnFormController<R>, dynamic, StackTrace)? onError;
-
+  final FutureOr<R> Function(LnFormState<R>)? onSubmit;
   final bool showUnsavedChangesMark;
-
   final Widget child;
-  final WrapperBuilder? wrapperBuilder;
-
-  // Wrapper props-
-  final bool notifyProgressState;
-  final bool notifySuccessAlerts;
-  final bool notifyErrorAlerts;
-
   final AutovalidateMode autovalidateMode;
 
   @override
   final bool notifyUnsavedChanges;
 
-  final LnFormController<R>? controller;
-
   @override
-  State<LnForm<R>> createState() =>
-      (controller as _LnFormState<R>?) ?? _LnFormState<R>();
+  State<LnForm<R>> createState() => LnFormState<R>();
 
-  static LnFormController? maybeOf(BuildContext context) {
+  static LnFormState? maybeOf(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<_LnFormScope>();
-    return scope?.controller;
+    return scope?.state;
   }
 
-  static LnFormController of(BuildContext context) {
-    final LnFormController? controller = maybeOf(context);
+  static LnFormState of(BuildContext context) {
+    final LnFormState? state = maybeOf(context);
     assert(() {
-      if (controller == null) {
+      if (state == null) {
         throw FlutterError(
           'LnForm.of() was called with a context that does not contain a LnForm widget.\n'
           'No LnForm widget ancestor could be found starting from the context that '
@@ -100,7 +77,7 @@ class LnForm<R> extends EditablePropsWidget
       }
       return true;
     }());
-    return controller!;
+    return state!;
   }
 }
 
@@ -111,19 +88,17 @@ abstract class LnFormFieldsHostState<R>
   final Set<LnFormFieldState> _fields = <LnFormFieldState>{};
   final Set<LnFormButtonState> _buttons = <LnFormButtonState>{};
 
-  LnAlertsController? _alertController;
-  LnAlertsController? get alertsController => _alertController;
-
   @override
-  void onScopedEditableStateChanged() {
-    super.onScopedEditableStateChanged();
+  void didScopedEditableStateChanged() {
+    super.didScopedEditableStateChanged();
     for (var field in _fields) {
-      field.notifyEditableScopePropsChanged();
+      field.setEditableScopeProps(scopedState);
     }
   }
 
   @override
-  void onComputedEditableStateChanged() {
+  void didComputedEditableStateChanged() {
+    super.didComputedEditableStateChanged();
     for (var button in _buttons) {
       button.rebuild();
     }
@@ -154,6 +129,7 @@ abstract class LnFormFieldsHostState<R>
 
   void _register(LnFormFieldState field) {
     _fields.add(field);
+    field.setEditableScopeProps(scopedState);
   }
 
   void _unregister(LnFormFieldState field) {
@@ -206,20 +182,18 @@ abstract class LnFormFieldsHostState<R>
 
   void clearFields() {
     _log("clearFields");
+    _triedToValidate = false;
     for (final LnFormFieldState field in _fields) {
       field.controller.clear();
-      field.setPassed(false);
     }
-    _triedToValidate = false;
   }
 
   void restoreFields() {
     _log("restoreFields");
+    _triedToValidate = false;
     for (final LnFormFieldState field in _fields) {
       field.controller.restore();
-      field.setPassed(false);
     }
-    _triedToValidate = false;
   }
 
   void _log(String functionName) {
@@ -230,63 +204,14 @@ abstract class LnFormFieldsHostState<R>
 
   @override
   Widget build(BuildContext context) {
-    /*Widget child = Builder(builder: (context) {
-      _alertController = LnAlerts.of(context);
-      return widget.child;
-    });
-
-    if (widget.wrapperBuilder != null) {
-      child = widget.wrapperBuilder!(context, child);
-    }*/
-
-    /*if (widget._hasWrapper) {
-      child = LnFormWrapper(
-        padding: widget.padding ?? EdgeInsets.zero,
-        margin: widget.margin ?? EdgeInsets.zero,
-        card: widget.card ?? false,
-        useSafeAreaForBottom: widget.useSafeAreaForBottom ?? false,
-        alertHost: widget.alertHost ?? true,
-        child: child,
-      );
-    }*/
-
-    /*child = OverlimitScrollView(
-      child: child,
-    );*/
-
     return FocusScope(
       onFocusChange: null,
-      child: widget.wrapperBuilder != null
-          ? widget.wrapperBuilder!(context, widget.child)
-          : widget.child,
+      child: widget.child,
     );
   }
 }
 
-abstract class LnFormController<R> extends LnFormFieldsHostState<R> {
-  factory LnFormController() => _LnFormState<R>();
-  LnFormController._();
-
-  FormAction get submit;
-  FormAction get restore;
-  FormAction get clear;
-  FormAction get enableEditing;
-  FormAction get cancelEditing;
-
-  final _changeNotifier = ChangeNotifier();
-  Listenable get listenable => _changeNotifier;
-
-  @override
-  void handleFieldValueChanged() {
-    super.handleFieldValueChanged();
-    // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-    _changeNotifier.notifyListeners();
-  }
-}
-
-class _LnFormState<R> extends LnFormController<R> with LnFormActions<R> {
-  _LnFormState() : super._();
-
+class LnFormState<R> extends LnFormFieldsHostState<R> with LnFormActions<R> {
   @override
   Widget build(BuildContext context) {
     Widget child = super.build(context);
@@ -306,7 +231,7 @@ class _LnFormState<R> extends LnFormController<R> with LnFormActions<R> {
     }
 
     return _LnFormScope(
-      controller: this,
+      state: this,
       child: child,
     );
   }

@@ -23,21 +23,22 @@ class MultiSelectField<ItemType> extends LnSimpleFutureField<List<ItemType>> {
     super.style,
     LnDecoration? decoration = const LnDecoration(),
   }) : super(
-            useFocusNode: true,
-            decoration: decoration?.copyWith(
-              suffixIcon: const Icon(Icons.arrow_drop_down_rounded, size: 36),
-            ),
-            builder: (field, computedState) {
-              return labelBuilder != null
-                  ? labelBuilder(field.value)
-                  : Text(
-                      field.value
-                          .map((selectedItem) => itemLabelBuilder(selectedItem))
-                          .join(", "),
-                    );
-            },
-            emptyValue: [],
-            onTrigger: _onTrigger);
+          useFocusNode: true,
+          decoration: decoration?.copyWith(
+            suffixIcon: const Icon(Icons.arrow_drop_down_rounded, size: 36),
+          ),
+          builder: (field, computedState) {
+            return labelBuilder != null
+                ? labelBuilder(field.value)
+                : Text(
+                    field.value
+                        .map((selectedItem) => itemLabelBuilder(selectedItem))
+                        .join(", "),
+                  );
+          },
+          emptyValue: [],
+          onTrigger: _onTrigger,
+        );
 
   final Iterable<ItemType> items;
   final String Function(ItemType?) itemLabelBuilder;

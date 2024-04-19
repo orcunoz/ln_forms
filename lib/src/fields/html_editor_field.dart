@@ -3,7 +3,6 @@ import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
 import 'package:ln_dialogs/ln_dialogs.dart';
 import 'package:quill_html_editor/quill_html_editor.dart';
-import 'package:universal_platform/universal_platform.dart';
 
 class HtmlEditorField extends LnSimpleFutureField<String> {
   HtmlEditorField({
@@ -40,9 +39,7 @@ class HtmlEditorField extends LnSimpleFutureField<String> {
         );
 
   static bool get supported =>
-      UniversalPlatform.isAndroid ||
-      UniversalPlatform.isIOS ||
-      UniversalPlatform.isWeb;
+      LnPlatform.isAndroid || LnPlatform.isIOS || LnPlatform.isWeb;
 
   @override
   LnSimpleFutureFieldState<String> createState() => _HtmlEditorFieldState();

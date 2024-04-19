@@ -121,6 +121,7 @@ mixin UnsavedChangesNotifiableStateMixin<
     );
   }
 
+  // ignore: unused_element
   Widget _buildVerticalUnsavedText(BuildContext context) {
     final theme = Theme.of(context);
     final alertColors = theme.alertsTheme.colorsOf(AlertType.warning);

@@ -2,7 +2,7 @@ part of 'form.dart';
 
 const _kDefaultTextOfAction = "\$\$DEF\$\$";
 
-typedef ActionGetter = FormAction Function(LnFormController);
+typedef ActionGetter = FormAction Function(LnFormState);
 
 class LnFormButton extends StatefulWidget {
   LnFormButton({
@@ -12,8 +12,9 @@ class LnFormButton extends StatefulWidget {
     required FormActionCallable? onPressed,
     this.style,
     this.primary = true,
-  }) : actionOf = ((controller) =>
-            FormAction(formController: controller, callable: onPressed));
+    this.showOnReadOnly = false,
+  }) : actionOf =
+            ((formState) => FormAction(form: formState, callable: onPressed));
 
   const LnFormButton._({
     required this.actionOf,
@@ -22,6 +23,7 @@ class LnFormButton extends StatefulWidget {
     required this.tooltip,
     required this.style,
     required this.primary,
+    this.showOnReadOnly = true,
   }) : assert(text != null || icon != null);
 
   LnFormButton.enableEditing({
@@ -104,6 +106,7 @@ class LnFormButton extends StatefulWidget {
   final String? tooltip;
   final ButtonStyle? style;
   final bool primary;
+  final bool showOnReadOnly;
 
   final ActionGetter actionOf;
 
@@ -113,7 +116,7 @@ class LnFormButton extends StatefulWidget {
 
 class LnFormButtonState extends LnState<LnFormButton> {
   final FocusNode _focusNode = FocusNode();
-  LnFormController? _form;
+  LnFormState? _form;
 
   Text? textOf(FormAction action) {
     final text = widget.text == _kDefaultTextOfAction
@@ -143,18 +146,15 @@ class LnFormButtonState extends LnState<LnFormButton> {
     final text = textOf(action);
 
     return ListenableBuilder(
-      listenable: Listenable.merge([
-        form.listenable,
-        _focusNode,
-      ]),
+      listenable: _focusNode,
       builder: (context, child) => Visibility(
         visible: switch (form.computedState.readOnly) {
-          true => action == form.enableEditing,
+          true => action == form.enableEditing || widget.showOnReadOnly,
           false => action != form.enableEditing,
         },
         child: _ProgressButton(
           primary: widget.primary,
-          progress: (form as LnFormActions).isActionInProgress(action),
+          progress: form.isActionInProgress(action),
           text: text,
           icon: widget.icon,
           style: widget.style,
@@ -167,9 +167,9 @@ class LnFormButtonState extends LnState<LnFormButton> {
 
   @override
   void dispose() {
-    super.dispose();
     _form?._unregisterButton(this);
     _focusNode.dispose();
+    super.dispose();
   }
 }
 

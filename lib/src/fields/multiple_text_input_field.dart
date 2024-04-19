@@ -221,6 +221,8 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
     final itemTextMaximumWidth =
         maxWidth - leftPadding - removeIconSize - removeIconPadding.horizontal;
 
+    final visualDensity = VisualDensity.comfortable;
+
     return Stack(
       children: [
         Positioned.fill(
@@ -249,13 +251,13 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
                 overflow: TextOverflow.fade,
               ),
             ),
-            if (computedState.active)
+            if (!computedState.readOnly)
               IconButton(
                 constraints: BoxConstraints.tightFor(
                   width: 42,
                   height: 42,
                 ),
-                visualDensity: VisualDensity.comfortable,
+                visualDensity: visualDensity,
                 padding: EdgeInsets.zero,
                 icon: Icon(
                   Icons.cancel_rounded,
@@ -263,15 +265,17 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
                   color: theme.hintColor,
                 ),
                 color: textStyle.color,
-                onPressed: () =>
-                    controller.value = (value..removeAt(itemIndex)).toList(),
+                onPressed: computedState.enabled
+                    ? () =>
+                        controller.value = (value..removeAt(itemIndex)).toList()
+                    : null,
                 focusNode: removeIconFocusNodes[itemIndex],
                 style: const ButtonStyle(
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               )
             else
-              const SizedBox(width: leftPadding)
+              SizedBox(width: leftPadding, height: 42)
           ],
         ),
       ],

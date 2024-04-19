@@ -125,8 +125,6 @@ class _CheckboxFieldState extends LnSimpleFieldState<bool?> {
       contentPadding: padding?.copyWith(top: 0, bottom: 0),
       //contentPadding: padding?.copyWith(
       //    top: padding.top / 2, bottom: padding.bottom / 2),
-      constraints: const BoxConstraints(minHeight: 0),
-      isCollapsed: true,
     );
   }
 

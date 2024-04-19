@@ -1,5 +1,4 @@
 import 'package:ln_core/ln_core.dart';
-import 'package:logger/logger.dart';
 
 class FormLog {
   static final Logger _logger = Logger(

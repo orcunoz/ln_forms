@@ -256,7 +256,7 @@ class TextFieldController extends TextEditingController
   bool get isEmpty => value.text.isEmpty;
 
   @override
-  bool get unsaved => value != savedValue;
+  bool get unsaved => value.text != savedValue.text;
 
   @override
   final didClear = ChangeNotifier();

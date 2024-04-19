@@ -1,25 +1,22 @@
 import 'dart:async';
 
-import 'package:ln_alerts/ln_alerts.dart';
-import 'package:ln_core/ln_core.dart';
-
 import 'editable_scope.dart';
 import 'form.dart';
 import 'localization/forms_localizations.dart';
 
-typedef FormActionCallable = FutureOr Function(LnFormController);
+typedef FormActionCallable<R> = FutureOr<R?> Function();
 
-class FormAction {
+class FormAction<R> {
   const FormAction({
-    required LnFormController formController,
-    required FormActionCallable? callable,
+    required LnFormState<R> form,
+    required FormActionCallable<R>? callable,
     bool Function()? checkEnabled,
-  })  : _form = formController as LnFormActions,
+  })  : _form = form,
         _callable = callable,
         _checkEnabled = checkEnabled;
 
-  final LnFormActions _form;
-  final FormActionCallable? _callable;
+  final LnFormState<R> _form;
+  final FormActionCallable<R>? _callable;
   final bool Function()? _checkEnabled;
 
   bool get enabled =>
@@ -45,30 +42,20 @@ class FormAction {
     }
   }
 
-  FutureOr call() async {
-    if (enabled) {
-      FutureOr<dynamic> futureOr;
-      try {
-        futureOr = _callable!(_form);
+  FutureOr<R?> call() {
+    if (!enabled) return null;
 
-        if (futureOr is Future) {
-          _form._addRunningAction(this);
-          return await futureOr;
-        } else {
-          return futureOr;
-        }
-      } catch (_) {
-        rethrow;
-      } finally {
-        if (futureOr is Future) {
-          _form._removeRunningAction(this);
-        }
-      }
+    final futureOr = _callable!();
+    if (futureOr is Future<R>) {
+      _form._addRunningAction(this);
+      return futureOr..whenComplete(() => _form._removeRunningAction(this));
+    } else {
+      return futureOr;
     }
   }
 }
 
-mixin LnFormActions<R> on LnFormController<R> {
+mixin LnFormActions<R> on LnFormFieldsHostState<R> {
   final Set<FormAction> _runningActions = <FormAction>{};
   bool get inProgress => _runningActions.isNotEmpty;
 
@@ -84,7 +71,7 @@ mixin LnFormActions<R> on LnFormController<R> {
     bool empty = _runningActions.isEmpty;
     bool added = _runningActions.add(action);
     if (empty && added) {
-      onScopedEditableStateChanged();
+      didScopedEditableStateChanged();
     }
   }
 
@@ -92,107 +79,53 @@ mixin LnFormActions<R> on LnFormController<R> {
     bool last = _runningActions.length == 1;
     bool removed = _runningActions.remove(action);
     if (last && removed) {
-      onScopedEditableStateChanged();
+      didScopedEditableStateChanged();
     }
   }
 
-  @override
   late final enableEditing = FormAction(
-    formController: this as LnFormController<R>,
+    form: this as LnFormState<R>,
     checkEnabled: () => computedState.readOnly,
-    callable: (_) {
+    callable: () {
       readOnly = false;
     },
   );
 
-  @override
   late final cancelEditing = FormAction(
-    formController: this,
+    form: this as LnFormState<R>,
     checkEnabled: () => !computedState.readOnly,
-    callable: (_) {
+    callable: () {
       readOnly = true;
     },
   );
 
-  @override
   late final clear = FormAction(
-    formController: this as LnFormController<R>,
+    form: this as LnFormState<R>,
     checkEnabled: () => !isEmpty,
-    callable: (c) => c.clear(),
+    callable: clearFields,
   );
 
-  @override
   late final restore = FormAction(
-    formController: this as LnFormController<R>,
+    form: this as LnFormState<R>,
     checkEnabled: () => hasUnsavedChanges,
-    callable: (c) => c.restore(),
+    callable: restoreFields,
   );
 
-  @override
-  late final submit = FormAction(
-    formController: this as LnFormController<R>,
-    callable: (_) async {
-      final unique = "$this.submit";
-      //Log.fatal("1 - $unique");
-      late LnAlertsController alertsController;
-
-      try {
-        if (widget.notifySuccessAlerts ||
-            widget.notifyErrorAlerts ||
-            widget.notifyProgressState) {
-          alertsController = this.alertsController ?? LnAlerts.of(context);
-          alertsController.removeAlert(unique);
-        }
-
-        //Log.fatal("2");
-        if (!validate()) {
-          await Future.delayed(Duration(milliseconds: 300));
-          await ensureVisibleErrorField();
-          throw UserFriendlyAlert(
+  late final submit = FormAction<R>(
+    form: this as LnFormState<R>,
+    callable: () {
+      if (!validate()) {
+        return Future.delayed(Duration(milliseconds: 300), () {
+          ensureVisibleErrorField();
+          return;
+        });
+        /*throw UserFriendlyAlert(
             type: AlertType.error,
             message: LnFormsLocalizations.current.pleaseFixValidationErrors,
-          );
-        }
-
-        //Log.fatal("3");
-        if (widget.notifyProgressState) {
-          //Log.fatal("3.1 notifyProgress: true");
-          alertsController.notifyProgressing(true, unique);
-        }
-
-        //Log.fatal("4");
-        final result = await widget.onSubmit!(this);
-        if (widget.notifySuccessAlerts) {
-          alertsController.show(
-            LnAlert.successAutoDetect(result),
-            unique: unique,
-          );
-        }
-
-        //Log.fatal("5");
-        return result;
-      } catch (error, stackTrace) {
-        Log.e(error, stackTrace: stackTrace);
-
-        if (widget.onError != null) {
-          widget.onError!(this, error, stackTrace);
-        }
-
-        if (widget.notifyErrorAlerts) {
-          alertsController.show(
-            LnAlert.errorAutoDetect(error),
-            unique: unique,
-          );
-        } else {
-          rethrow;
-        }
-      } finally {
-        //Log.fatal("5-finally");
-        if (widget.notifyProgressState) {
-          //Log.fatal("5.1-finally notifyProgress: false");
-          alertsController.notifyProgressing(false, unique);
-        }
+          );*/
       }
+
+      return widget.onSubmit!(this as LnFormState<R>);
     },
   );
 }

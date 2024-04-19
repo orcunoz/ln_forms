@@ -100,8 +100,8 @@ abstract class LnFutureFieldState<T, CT> extends LnFormFieldState<T, CT> {
 
   Future<T?>? future;
 
-  @override
-  bool get focused => future != null || super.focused;
+  /*@override
+  bool get focused => future != null || super.focused;*/
 
   @override
   String? get errorText => future != null ? null : super.errorText;
@@ -135,7 +135,7 @@ abstract class LnFutureFieldState<T, CT> extends LnFormFieldState<T, CT> {
   Future<T?> _invoke() async {
     if (future != null) return Future.value(null);
     future = widget.onTrigger(this);
-    rebuild();
+    //rebuild();
 
     final result = await future;
 
@@ -143,7 +143,8 @@ abstract class LnFutureFieldState<T, CT> extends LnFormFieldState<T, CT> {
     if (result != null) {
       controller.fieldValue = result;
     }
-    Future.delayed(Duration(milliseconds: 50), requestFocus);
+    //rebuild();
+    //Future.delayed(Duration.zero, requestFocus);
 
     return result;
   }

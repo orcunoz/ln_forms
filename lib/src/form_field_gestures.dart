@@ -91,9 +91,10 @@ class LnFormFieldGestures extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget result = GestureDetector(
-      onTap: onTap,
+      onTap: active ? onTap : null,
       child: MouseRegion(
-        cursor: mouseCursor ?? MouseCursor.defer,
+        cursor:
+            !active ? MouseCursor.defer : (mouseCursor ?? MouseCursor.defer),
         onEnter: active ? onPointerEnter : null,
         onExit: active ? onPointerExit : null,
         child: child,

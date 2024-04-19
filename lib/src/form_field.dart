@@ -120,82 +120,88 @@ mixin _FormFieldControllerMixin<T, CT> on LnState<LnFormField<T, CT>>
   @override
   void initState() {
     super.initState();
+
     if (widget.controller == null) {
-      _createInternalController(widget.value as T);
+      _createLocalController(widget.value as T);
     } else {
-      widget.controller!.addListener(_handleControllerChanged);
+      _syncController(widget.controller!);
     }
   }
-
-  //Restoration
-  /*@override
-  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    if (_localController != null) {
-      _registerController();
-    }
-    registerForRestoration(_errorText, 'error_text');
-  }*/
 
   @override
   void didUpdateWidget(covariant LnFormField<T, CT> oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     if (widget.controller != oldWidget.controller) {
       if (oldWidget.controller == null) {
-        //unregisterFromRestoration(_localController!);
-        _localController!.dispose();
-        _localController = null;
+        _disposeLocalController();
       } else {
-        oldWidget.controller!.removeListener(_handleControllerChanged);
+        _unsyncController(oldWidget.controller!);
       }
 
       if (widget.controller == null) {
-        _createInternalController(oldWidget.value as T);
+        _createLocalController(oldWidget.value as T);
       } else {
-        widget.controller!.addListener(_handleControllerChanged);
+        _syncController(widget.controller!);
       }
     } else if (oldWidget.value != widget.value && widget.controller == null) {
-      endOfFrame(() {
-        _localController!.value = _localController!.valueOf(widget.value as T);
-      });
+      _localController!.value = _localController!.valueOf(widget.value as T);
     }
   }
 
   BaseFieldController<CT, T> createController(T value);
 
-  //Restoration
-  /*void _registerController() {
-    assert(_localController != null);
-    registerForRestoration(_localController!, 'controller');
-  }*/
-
-  void _createInternalController(T value) {
+  void _createLocalController(T value) {
     assert(_localController == null);
-    _localController = createController(value)
-      ..addListener(_handleControllerChanged);
+    _localController = createController(value);
+    _syncController(_localController!);
+  }
 
-    //Restoration
-    /*if (!restorePending) {
-      _registerController();
-    }*/
+  void _disposeLocalController() {
+    assert(_localController != null);
+    _unsyncController(_localController!);
+    _localController!.dispose();
+    _localController = null;
+  }
+
+  void _syncController(BaseFieldController<CT, T> controller) {
+    controller
+      ..addListener(_handleControllerChanged)
+      ..didClear.addListener(_handleControllerCleared)
+      ..didRestore.addListener(_handleControllerRestored)
+      ..didSave.addListener(_handleControllerSaved);
+  }
+
+  void _unsyncController(BaseFieldController<CT, T> controller) {
+    controller
+      ..removeListener(_handleControllerChanged)
+      ..didClear.removeListener(_handleControllerCleared)
+      ..didRestore.removeListener(_handleControllerRestored)
+      ..didSave.removeListener(_handleControllerSaved);
   }
 
   @override
   void dispose() {
-    super.dispose();
-    if (widget.controller != null) {
-      widget.controller!.removeListener(_handleControllerChanged);
+    if (_localController != null) {
+      _disposeLocalController();
     } else {
-      _localController!.dispose();
+      _unsyncController(widget.controller!);
     }
+    super.dispose();
   }
 
   void _handleControllerChanged() {
+    log("_handleControllerChanged");
     final value = controller.fieldValueOf(controller.value);
     onValueChanged(value);
     if (widget.onChanged != null) {
       widget.onChanged!(value);
     }
   }
+
+  void _handleControllerCleared() {}
+  void _handleControllerRestored() {}
+  void _handleControllerSaved() {}
 
   void onValueChanged(T value) {}
 }
@@ -364,12 +370,12 @@ mixin _FieldFocusNode<T, CT> on LnState<LnFormField<T, CT>>
 
   @override
   void dispose() {
-    super.dispose();
     if (widget.focusNode == null) {
       _internalNode!.dispose();
     } else {
       _removeNodeListeners(widget.focusNode);
     }
+    super.dispose();
   }
 }
 
@@ -398,7 +404,7 @@ abstract class LnFormFieldState<T, CT>
     canRequestFocus: false,
   );
 
-  LnFormController? _subscribedForm;
+  LnFormState? _subscribedForm;
 
   TextStyle get baseStyle => theme.formFieldStyle.merge(widget.style);
 
@@ -411,34 +417,36 @@ abstract class LnFormFieldState<T, CT>
   InputDecoration? _computedDecoration;
   InputDecoration? get computedDecoration => _computedDecoration;
 
+  EditablePropsMixin? _editableScopeProps;
   @override
-  EditablePropsMixin? get editableScopeProps => _subscribedForm?.scopedState;
+  EditablePropsMixin? get editableScopeProps => _editableScopeProps;
 
-  @override
-  void onComputedEditableStateChanged() {
-    rebuild();
+  void setEditableScopeProps(EditablePropsMixin props) {
+    if (_editableScopeProps == null ||
+        !_editableScopeProps!.isEditablePropsEquals(props)) {
+      _editableScopeProps = props;
+      notifyEditableScopePropsChanged();
+    }
   }
 
   Widget? buildActionButton(BuildContext context, FocusNode focusNode) {
     final show = computedState.active &&
-        (UniversalPlatform.isDesktop || UniversalPlatform.isWeb
-            ? hovered
-            : focused);
+        (LnPlatform.isDesktop || LnPlatform.isWeb ? hovered : focused);
 
     if (show) {
       if (computedState.restoreable && controller.unsaved) {
-        return InkWell(
+        return IconButton(
           focusNode: focusNode,
-          onTap: controller.restore,
-          child: const Icon(Icons.settings_backup_restore_rounded),
-          //tooltip: S.current.restore,
+          icon: Icon(Icons.settings_backup_restore_rounded),
+          tooltip: LnLocalizations.current.restore,
+          onPressed: controller.restore,
         );
       } else if (computedState.clearable && !controller.isEmpty) {
-        return InkWell(
+        return IconButton(
           focusNode: focusNode,
-          onTap: controller.clear,
-          child: const Icon(Icons.clear_rounded),
-          //tooltip: S.current.clear,
+          icon: Icon(Icons.clear_rounded),
+          tooltip: LnLocalizations.current.clear,
+          onPressed: controller.clear,
         );
       }
     }
@@ -474,6 +482,20 @@ abstract class LnFormFieldState<T, CT>
     _subscribedForm?.handleFieldValueChanged();
   }
 
+  @mustCallSuper
+  @override
+  void _handleControllerCleared() {
+    super._handleControllerCleared();
+    setPassed(false);
+  }
+
+  @mustCallSuper
+  @override
+  void _handleControllerRestored() {
+    super._handleControllerRestored();
+    setPassed(false);
+  }
+
   FutureOr<void> ensureVisible() {
     final scrollPosition = Scrollable.maybeOf(context)?.position;
     if (scrollPosition != null) {
@@ -489,7 +511,6 @@ abstract class LnFormFieldState<T, CT>
     if (form != _subscribedForm) {
       _subscribedForm?._unregister(this);
       _subscribedForm = form?.._register(this);
-      notifyEditableScopePropsChanged();
     }
   }
 
@@ -506,18 +527,17 @@ abstract class LnFormFieldState<T, CT>
       _editingActionButtonFocusNode,
     );
 
-    InputDecoration? decoration =
-        widget.decoration?.build().applyDefaults(theme.inputDecorationTheme);
+    LnDecoration? decoration = widget.decoration;
 
     if (actionButton != null || errorText != null) {
       decoration = decoration?.copyWith(
-        suffixIcon: const Icon(Icons.clear_rounded),
-        errorText: errorText,
+        suffixIcon: actionButton,
+        error: errorText,
       );
     }
 
     _computedDecoration =
-        decoration?.copyWith(suffixIcon: const Icon(Icons.clear_rounded));
+        decoration?.build().applyDefaults(theme.inputDecorationTheme);
   }
 
   @override
@@ -546,12 +566,14 @@ abstract class LnFormFieldState<T, CT>
         return LnFormFieldDecorator(
           enabled: computedState.enabled,
           readOnly: computedState.readOnly,
-          focused: focused,
+          focused: focused ||
+              (this is LnFutureFieldState &&
+                  (this as LnFutureFieldState).future != null),
           hovered: hovered,
           empty: controller.isEmpty,
           decoration: computedDecoration,
           baseTextStyle: baseStyle,
-          child: widget.builder(this, computedState),
+          child: AbsorbPointer(child: widget.builder(this, computedState)),
         );
       },
     );

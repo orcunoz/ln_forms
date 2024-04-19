@@ -88,8 +88,7 @@ class LnFormFieldDecorator extends Builder {
             isFocused: focused,
             isHovering: hovered,
             isEmpty: empty,
-            decoration: effectiveDecoration.copyWith(
-                suffixIcon: const Icon(Icons.clear_rounded)),
+            decoration: effectiveDecoration,
             child: result,
           );
 
