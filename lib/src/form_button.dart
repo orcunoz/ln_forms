@@ -6,25 +6,29 @@ typedef ActionGetter = FormAction Function(LnFormState);
 
 class LnFormButton extends StatefulWidget {
   LnFormButton({
-    this.text,
+    String? text,
     this.icon,
     this.tooltip,
     required FormActionCallable? onPressed,
     this.style,
     this.primary = true,
-    this.showOnReadOnly = false,
-  }) : actionOf =
+    this.showOnReadOnlyMode = true,
+    this.showOnEditMode = true,
+  })  : assert(text != null || icon != null),
+        resolveText = ((_) => text),
+        actionOf =
             ((formState) => FormAction(form: formState, callable: onPressed));
 
   const LnFormButton._({
     required this.actionOf,
-    required this.text,
+    required this.resolveText,
     required this.icon,
     required this.tooltip,
     required this.style,
     required this.primary,
-    this.showOnReadOnly = true,
-  }) : assert(text != null || icon != null);
+    this.showOnReadOnlyMode = false,
+    this.showOnEditMode = false,
+  });
 
   LnFormButton.enableEditing({
     String? text = _kDefaultTextOfAction,
@@ -32,13 +36,16 @@ class LnFormButton extends StatefulWidget {
     String? tooltip,
     ButtonStyle? style,
     bool primary = true,
+    required FormActionCallable? onPressed,
   }) : this._(
-          actionOf: (form) => form.enableEditing,
-          text: text,
+          actionOf: ((formState) =>
+              FormAction(form: formState, callable: onPressed)),
+          resolveText: (l) => _textOrDefault(text, l.editButton),
           icon: icon,
           tooltip: tooltip,
           style: style,
           primary: primary,
+          showOnReadOnlyMode: true,
         );
 
   LnFormButton.cancelEditing({
@@ -47,13 +54,16 @@ class LnFormButton extends StatefulWidget {
     String? tooltip,
     ButtonStyle? style,
     bool primary = false,
+    required FormActionCallable? onPressed,
   }) : this._(
-          actionOf: (form) => form.cancelEditing,
-          text: text,
+          actionOf: ((formState) =>
+              FormAction(form: formState, callable: onPressed)),
+          resolveText: (l) => _textOrDefault(text, l.cancelButton),
           icon: icon,
           tooltip: tooltip,
           style: style,
           primary: primary,
+          showOnEditMode: true,
         );
 
   LnFormButton.submit({
@@ -64,11 +74,12 @@ class LnFormButton extends StatefulWidget {
     bool primary = true,
   }) : this._(
           actionOf: (form) => form.submit,
-          text: text,
+          resolveText: (l) => _textOrDefault(text, l.saveButton),
           icon: icon,
           tooltip: tooltip,
           style: style,
           primary: primary,
+          showOnEditMode: true,
         );
 
   LnFormButton.restore({
@@ -79,11 +90,12 @@ class LnFormButton extends StatefulWidget {
     bool primary = false,
   }) : this._(
           actionOf: (form) => form.restore,
-          text: text,
+          resolveText: (l) => _textOrDefault(text, l.restoreButton),
           icon: icon,
           tooltip: tooltip,
           style: style,
           primary: primary,
+          showOnEditMode: true,
         );
 
   LnFormButton.clear({
@@ -94,19 +106,25 @@ class LnFormButton extends StatefulWidget {
     bool primary = false,
   }) : this._(
           actionOf: (form) => form.clear,
-          text: text,
+          resolveText: (l) => _textOrDefault(text, l.resetButton),
           icon: icon,
           tooltip: tooltip,
           style: style,
           primary: primary,
+          showOnEditMode: true,
         );
 
-  final String? text;
+  static String? _textOrDefault(String? text, String defaultText) {
+    return text == _kDefaultTextOfAction ? defaultText : text;
+  }
+
+  final String? Function(LnFormsLocalizations) resolveText;
   final Widget? icon;
   final String? tooltip;
   final ButtonStyle? style;
   final bool primary;
-  final bool showOnReadOnly;
+  final bool showOnReadOnlyMode;
+  final bool showOnEditMode;
 
   final ActionGetter actionOf;
 
@@ -119,10 +137,7 @@ class LnFormButtonState extends LnState<LnFormButton> {
   LnFormState? _form;
 
   Text? textOf(FormAction action) {
-    final text = widget.text == _kDefaultTextOfAction
-        ? action.defaultButtonText
-        : widget.text;
-
+    final text = widget.resolveText(LnFormsLocalizations.current);
     return text == null ? null : Text(text);
   }
 
@@ -148,17 +163,16 @@ class LnFormButtonState extends LnState<LnFormButton> {
     return ListenableBuilder(
       listenable: _focusNode,
       builder: (context, child) => Visibility(
-        visible: switch (form.computedState.readOnly) {
-          true => action == form.enableEditing || widget.showOnReadOnly,
-          false => action != form.enableEditing,
-        },
+        visible: form.computedState.readOnly
+            ? widget.showOnReadOnlyMode
+            : widget.showOnEditMode,
         child: _ProgressButton(
           primary: widget.primary,
           progress: form.isActionInProgress(action),
           text: text,
           icon: widget.icon,
           style: widget.style,
-          onPressed: action.enabled ? action.call : null,
+          onPressed: action.callable,
           focusNode: _focusNode,
         ),
       ),

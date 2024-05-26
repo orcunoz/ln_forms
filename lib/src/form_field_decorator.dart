@@ -50,11 +50,11 @@ class LnFormFieldDecorator extends Builder {
                   focusedErrorBorder: readOnlyBorder,
                 )
                 .apply(
-                  hint: Wrapped(null),
-                  counter: Wrapped(null),
-                  suffixIcon: Wrapped(null),
-                  error: Wrapped(null),
-                  helper: Wrapped(null),
+                  hint: Value(null),
+                  counter: Value(null),
+                  suffixIcon: Value(null),
+                  error: Value(null),
+                  helper: Value(null),
                 );
           } else {
             Color? fillColor;

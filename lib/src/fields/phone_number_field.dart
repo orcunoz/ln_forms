@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
 import 'package:ln_forms/src/utilities/extensions.dart';
 export 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
@@ -57,38 +58,35 @@ class PhoneNumberField extends TextInputField {
 class PhoneNumberFieldState extends TextInputFieldState {
   @override
   InputDecoration? get computedDecoration {
-    final decoration = super.computedDecoration;
+    InputDecoration? decoration = super.computedDecoration;
     final prefixText = widget.decoration?.prefixText;
 
     if (prefixText != null) {
-      final padding = EdgeInsets.only(
-          left: theme.inputDecorationTheme.contentPadding
-                  ?.resolve(textDirection)
-                  .left ??
-              0);
-      return decoration
-          ?.apply(
-            prefixText: Value(null),
-          )
-          .copyWith(
-            prefixIcon: focused || value.isNotEmpty
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: padding.left,
-                      ),
-                      Text(
-                        widget.decoration!.prefixText!,
-                        style: baseStyle,
-                        maxLines: 1,
-                      ),
-                    ],
-                  )
-                : null,
+      decoration = decoration?.apply(prefixText: Value(null)).copyWith(
+            prefixIcon: focused || value.isNotEmpty ? buildPrefix() : null,
           );
-    } else {
-      return decoration;
     }
+
+    return decoration;
+  }
+
+  Widget buildPrefix() {
+    final contentPadding =
+        theme.inputDecorationTheme.contentPadding?.resolve(textDirection);
+
+    Widget result = Text(
+      widget.decoration!.prefixText!,
+      style: baseStyle,
+      maxLines: 1,
+    );
+
+    if (contentPadding != null) {
+      result = Padding(
+        padding: contentPadding.copyWith(right: 0),
+        child: result,
+      );
+    }
+
+    return result;
   }
 }

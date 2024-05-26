@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:ln_forms/ln_forms.dart';
 
-class ReadOnlyField extends LnSimpleField<String?> {
+class ReadOnlyField extends LnSimpleField<void> {
   ReadOnlyField({
     super.key,
-    super.value,
+    Widget? child,
     super.controller,
     super.style,
     super.decoration = const LnDecoration(),
@@ -18,6 +18,7 @@ class ReadOnlyField extends LnSimpleField<String?> {
           onChanged: null,
           onSaved: null,
           validator: null,
+          value: null,
           focusNode: FocusNode(
             canRequestFocus: false,
             skipTraversal: true,
@@ -25,7 +26,7 @@ class ReadOnlyField extends LnSimpleField<String?> {
             descendantsAreFocusable: false,
           ),
           builder: (field, computedState) {
-            return Text(value ?? "");
+            return child;
           },
           emptyValue: null,
         );

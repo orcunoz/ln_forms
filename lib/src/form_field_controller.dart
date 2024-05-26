@@ -27,25 +27,13 @@ class FieldController<T> extends BaseFieldController<T, T> {
   T valueOf(T fieldValue) => fieldValue;
 }
 
-abstract class BaseFieldController<T, FT> extends ValueNotifier<T>
-    with FieldControllerMixin<T> {
+abstract class BaseFieldController<T, FT> extends ValueNotifier<T> {
   BaseFieldController(
     super.value, {
     required this.emptyValue,
   });
 
-  @override
   final T? emptyValue;
-
-  FT get fieldValue => fieldValueOf(value);
-  set fieldValue(FT fieldValue) => value = valueOf(fieldValue);
-
-  FT fieldValueOf(T value);
-  T valueOf(FT fieldValue);
-}
-
-mixin FieldControllerMixin<T> implements ValueNotifier<T> {
-  T? get emptyValue;
   late T _savedValue = value;
   T get savedValue => _savedValue;
 
@@ -56,6 +44,12 @@ mixin FieldControllerMixin<T> implements ValueNotifier<T> {
   final didRestore = ChangeNotifier();
   final didClear = ChangeNotifier();
   final didSave = ChangeNotifier();
+
+  FT get fieldValue => fieldValueOf(value);
+  set fieldValue(FT fieldValue) => value = valueOf(fieldValue);
+
+  FT fieldValueOf(T value);
+  T valueOf(FT fieldValue);
 
   @mustCallSuper
   void save() {
@@ -82,6 +76,8 @@ mixin FieldControllerMixin<T> implements ValueNotifier<T> {
 
   @override
   void dispose() {
+    super.dispose();
+
     didSave.dispose();
     didClear.dispose();
     didRestore.dispose();

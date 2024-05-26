@@ -380,7 +380,7 @@ mixin _FieldFocusNode<T, CT> on LnState<LnFormField<T, CT>>
 }
 
 abstract class LnFormFieldState<T, CT>
-    extends ScopedEditablePropsWidgetState<LnFormField<T, CT>>
+    extends ScopedComputedEditableState<LnFormField<T, CT>>
     with
         RestorationMixin<LnFormField<T, CT>>,
         FieldLoggerMixin,
@@ -422,8 +422,7 @@ abstract class LnFormFieldState<T, CT>
   EditablePropsMixin? get editableScopeProps => _editableScopeProps;
 
   void setEditableScopeProps(EditablePropsMixin props) {
-    if (_editableScopeProps == null ||
-        !_editableScopeProps!.isEditablePropsEquals(props)) {
+    if (_editableScopeProps?.isEditablePropsEquals(props) != true) {
       _editableScopeProps = props;
       notifyEditableScopePropsChanged();
     }
@@ -573,7 +572,7 @@ abstract class LnFormFieldState<T, CT>
           empty: controller.isEmpty,
           decoration: computedDecoration,
           baseTextStyle: baseStyle,
-          child: AbsorbPointer(child: widget.builder(this, computedState)),
+          child: widget.builder(this, computedState),
         );
       },
     );

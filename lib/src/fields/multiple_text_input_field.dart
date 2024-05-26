@@ -38,7 +38,7 @@ class MultipleTextInputField extends LnSimpleField<List<String>> {
           value: _autoSplit(value, separator),
           controller: null,
           useFocusNode: false,
-          decoration: decoration?.apply(prefixText: const Wrapped(null)),
+          decoration: decoration?.apply(prefixText: const Value(null)),
           onChanged: onChanged == null
               ? null
               : (val) => onChanged(_autoJoin(val, separator)),
@@ -79,7 +79,7 @@ class MultipleTextInputField extends LnSimpleField<List<String>> {
           controller: null,
           decoration: decoration
               ?.copyWith(suffixIcon: const Icon(Icons.storage_rounded))
-              .apply(prefixText: const Wrapped(null)),
+              .apply(prefixText: const Value(null)),
           builder: (field, computedState) =>
               (field as _MultipleTextInputFieldState)
                   ._buildInside(computedState),
@@ -118,6 +118,8 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
     ..grow(value.length,
         (_) => FocusNode(skipTraversal: true, canRequestFocus: false));
 
+  static const EdgeInsets itemPadding = EdgeInsets.all(6);
+
   @override
   MultipleTextInputField get widget => super.widget as MultipleTextInputField;
 
@@ -132,11 +134,7 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
     _hintActive = false;
 
     if (!hasFocus) {
-      String editingText = _textEditingController.text;
-      if (editingText.isNotEmpty) {
-        _textEditingController.clear();
-      }
-      _addItemIfValid(editingText);
+      _addInputToValueIfValid(dontClearIfInvalid: false);
     }
 
     super.onFocusChanged(hasFocus);
@@ -145,9 +143,7 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
   @override
   KeyEventResult onKeyEvent(KeyEvent event) {
     if (event.logicalKey == LogicalKeyboardKey.enter) {
-      if (_addItemIfValid(_textEditingController.text)) {
-        _textEditingController.clear();
-      }
+      _addInputToValueIfValid();
       return KeyEventResult.handled;
     }
 
@@ -170,9 +166,7 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
         item = item.toUpperCase();
       }
 
-      if (_addItemIfValid(item)) {
-        _textEditingController.clear();
-      }
+      _addInputToValueIfValid();
     }
 
     if (_hintActive == _textEditingController.text.isEmpty) {
@@ -200,90 +194,92 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
     return errorMessage;
   }
 
-  bool _addItemIfValid(String tag) {
-    if (tag.isNotEmpty && _validateItem(tag) == null) {
-      controller.value = (value..add(tag)).toList();
-      return true;
+  bool _addInputToValueIfValid({bool dontClearIfInvalid = true}) {
+    String input = _textEditingController.text;
+    if (input.isNotEmpty) {
+      if (widget.prefixText != null) {
+        input = "${widget.prefixText} $input";
+      }
+      if (_validateItem(input) == null) {
+        controller.value = (value..add(input)).toList();
+        _textEditingController.clear();
+      } else {
+        if (!dontClearIfInvalid) {
+          _textEditingController.clear();
+        }
+      }
     }
-    return false;
+
+    return true;
   }
 
   Widget buildItem(int itemIndex, ComputedEditableProps computedState,
       double maxWidth, TextStyle textStyle, Color backgroundColor) {
     backgroundColor = computedState.readOnly
-        ? backgroundColor.blend(backgroundColor.onColor, 50)
+        ? backgroundColor.withOpacityFactor(.5)
         : backgroundColor;
 
-    const removeIconSize = 18.0;
-    const removeIconPadding =
-        EdgeInsets.only(top: 6, bottom: 6, left: 2, right: 6);
-    const leftPadding = 6.0;
-    final itemTextMaximumWidth =
-        maxWidth - leftPadding - removeIconSize - removeIconPadding.horizontal;
-
     final visualDensity = VisualDensity.comfortable;
+    final overflowInsets = EdgeInsets.all(8);
+    final iconTapTargetSize = 42.0;
 
     return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
       children: [
-        Positioned.fill(
-          top: 4,
-          bottom: 4,
-          right: 6,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              border: Border.all(width: 0.5, color: backgroundColor),
-              borderRadius: BorderRadius.circular(12),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            border: Border.all(width: 0.5, color: backgroundColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: itemPadding.copyWith(
+                right: computedState.readOnly
+                    ? null
+                    : iconTapTargetSize - overflowInsets.horizontal),
+            child: Text(
+              value[itemIndex],
+              style: textStyle,
+              overflow: TextOverflow.fade,
             ),
           ),
         ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: itemTextMaximumWidth),
-              child: Text(
-                value[itemIndex],
-                style: textStyle,
-                overflow: TextOverflow.fade,
+        if (!computedState.readOnly)
+          Positioned(
+            right: -overflowInsets.right,
+            top: -overflowInsets.top,
+            bottom: -overflowInsets.bottom,
+            width: iconTapTargetSize,
+            child: IconButton(
+              constraints: BoxConstraints.tightFor(
+                width: iconTapTargetSize,
+                height: iconTapTargetSize,
+              ),
+              visualDensity: visualDensity,
+              padding: EdgeInsets.zero,
+              icon: Icon(
+                Icons.cancel_rounded,
+                size: 18.0,
+                color: theme.hintColor,
+              ),
+              color: textStyle.color,
+              onPressed: computedState.enabled
+                  ? () =>
+                      controller.value = (value..removeAt(itemIndex)).toList()
+                  : null,
+              focusNode: removeIconFocusNodes[itemIndex],
+              style: const ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
-            if (!computedState.readOnly)
-              IconButton(
-                constraints: BoxConstraints.tightFor(
-                  width: 42,
-                  height: 42,
-                ),
-                visualDensity: visualDensity,
-                padding: EdgeInsets.zero,
-                icon: Icon(
-                  Icons.cancel_rounded,
-                  size: removeIconSize,
-                  color: theme.hintColor,
-                ),
-                color: textStyle.color,
-                onPressed: computedState.enabled
-                    ? () =>
-                        controller.value = (value..removeAt(itemIndex)).toList()
-                    : null,
-                focusNode: removeIconFocusNodes[itemIndex],
-                style: const ButtonStyle(
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              )
-            else
-              SizedBox(width: leftPadding, height: 42)
-          ],
-        ),
+          )
       ],
     );
   }
 
   Widget _buildInside(ComputedEditableProps computedState) {
-    final itemBackgroundColor = theme.hintColor.withOpacity(.06);
+    final itemBackgroundColor = theme.colorScheme.surfaceVariant;
     final style = baseStyle;
     final itemStyle = style.apply(fontSizeFactor: 0.9);
 
@@ -297,8 +293,7 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
       ],
       onSubmitted: (text) {
         if (text.isNotEmpty) {
-          _textEditingController.clear();
-          _addItemIfValid(text);
+          _addInputToValueIfValid();
           if (!effectiveFocusNode.hasFocus) effectiveFocusNode.requestFocus();
         } else {
           widget.onSubmitted?.call();
@@ -334,33 +329,36 @@ class _MultipleTextInputFieldState extends LnSimpleFieldState<List<String>> {
       return SpacedColumn(
         spacing: 8,
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            constraints: BoxConstraints(
-              minHeight: computedState.readOnly ? 0 : widget.minContentHeight,
-            ),
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              runSpacing: 2,
-              spacing: 2,
-              children: [
-                for (var i = 0; i < value.length; i++)
-                  buildItem(
-                    i,
-                    computedState,
-                    constraints.maxWidth,
-                    itemStyle,
-                    itemBackgroundColor,
-                  ),
-              ],
+          Transform.translate(
+            offset: Offset(-itemPadding.left, 0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: computedState.readOnly ? 0 : widget.minContentHeight,
+              ),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: 4,
+                spacing: 6,
+                children: [
+                  for (var i = 0; i < value.length; i++)
+                    buildItem(
+                      i,
+                      computedState,
+                      constraints.maxWidth,
+                      itemStyle,
+                      itemBackgroundColor,
+                    ),
+                ],
+              ),
             ),
           ),
-          Container(
-            width: effectiveFocusNode.hasFocus ? constraints.maxWidth : 0,
-            height: computedState.readOnly ? 0 : null,
-            alignment: Alignment.bottomLeft,
-            child: editorSide,
-          ),
+          if (!computedState.readOnly)
+            SizedBox(
+              width: effectiveFocusNode.hasFocus ? constraints.maxWidth : 0,
+              child: editorSide,
+            ),
         ],
       );
     });

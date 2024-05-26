@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:ln_alerts/ln_alerts.dart';
 import 'package:ln_core/ln_core.dart';
 import 'package:ln_forms/ln_forms.dart';
 import 'package:ln_forms/src/form_field_decorator.dart';
@@ -29,8 +28,7 @@ enum AutovalidateMode {
   always,
 }
 
-class LnForm<R> extends EditablePropsWidget
-    implements UnsavedChangesNotifiableWidget {
+class LnForm<R> extends EditablePropsWidget {
   LnForm({
     super.key,
     super.enabled,
@@ -50,8 +48,6 @@ class LnForm<R> extends EditablePropsWidget
   final bool showUnsavedChangesMark;
   final Widget child;
   final AutovalidateMode autovalidateMode;
-
-  @override
   final bool notifyUnsavedChanges;
 
   @override
@@ -82,23 +78,70 @@ class LnForm<R> extends EditablePropsWidget
 }
 
 abstract class LnFormFieldsHostState<R>
-    extends EditableScopeWidgetEditableState<LnForm<R>>
-    with UnsavedChangesNotifiableStateMixin<LnForm<R>> {
+    extends ComputedEditableState<LnForm<R>> {
   bool _triedToValidate = false;
   final Set<LnFormFieldState> _fields = <LnFormFieldState>{};
   final Set<LnFormButtonState> _buttons = <LnFormButtonState>{};
 
+  LnUnsavedObserver<LnFormState>? _observer;
+  bool _registeredToUnsavedObserver = false;
+  Color _saveStateBackColor = Colors.red.withOpacity(0);
+
   @override
-  void didScopedEditableStateChanged() {
-    super.didScopedEditableStateChanged();
-    for (var field in _fields) {
-      field.setEditableScopeProps(scopedState);
+  void didUpdateWidget(LnForm<R> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.notifyUnsavedChanges != oldWidget.notifyUnsavedChanges) {
+      _notifyUnsavedChanges();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final observer = LnUnsavedObserver.maybeOf<LnFormState>(context);
+    if (_observer != observer) {
+      _observer = observer;
+      _notifyUnsavedChanges();
+    }
+  }
+
+  @override
+  void dispose() {
+    _unregisterUnsavedObserver();
+
+    super.dispose();
+  }
+
+  void _registerUnsavedObserver() {
+    if (!_registeredToUnsavedObserver) {
+      _observer?.registerAsUnsaved(this as LnFormState);
+      _registeredToUnsavedObserver = true;
+    }
+  }
+
+  void _unregisterUnsavedObserver() {
+    if (_registeredToUnsavedObserver) {
+      _observer?.unregister(this as LnFormState);
+      _registeredToUnsavedObserver = false;
+    }
+  }
+
+  void _notifyUnsavedChanges() {
+    if (widget.notifyUnsavedChanges && hasUnsavedChanges) {
+      _registerUnsavedObserver();
+    } else {
+      _unregisterUnsavedObserver();
     }
   }
 
   @override
   void didComputedEditableStateChanged() {
     super.didComputedEditableStateChanged();
+    for (var field in _fields) {
+      field.setEditableScopeProps(editableProps);
+    }
     for (var button in _buttons) {
       button.rebuild();
     }
@@ -106,7 +149,6 @@ abstract class LnFormFieldsHostState<R>
 
   bool get isEmpty => !_fields.any((f) => !f.controller.isEmpty);
 
-  @override
   bool get hasUnsavedChanges => _fields.any((f) => f.controller.unsaved);
 
   @mustCallSuper
@@ -125,11 +167,15 @@ abstract class LnFormFieldsHostState<R>
     if (widget.onChanged != null) {
       widget.onChanged!();
     }
+
+    if (_registeredToUnsavedObserver != hasUnsavedChanges) {
+      _notifyUnsavedChanges();
+    }
   }
 
   void _register(LnFormFieldState field) {
     _fields.add(field);
-    field.setEditableScopeProps(scopedState);
+    field.setEditableScopeProps(editableProps);
   }
 
   void _unregister(LnFormFieldState field) {
@@ -175,6 +221,11 @@ abstract class LnFormFieldsHostState<R>
 
   void saveFields() {
     _log("saveFields");
+    _triedToValidate = false;
+    setState(() {
+      _saveStateBackColor =
+          _saveStateBackColor.withOpacity(_saveStateBackColor.opacity + .1);
+    });
     for (final LnFormFieldState field in _fields) {
       field.controller.save();
     }
@@ -224,7 +275,7 @@ class LnFormState<R> extends LnFormFieldsHostState<R> with LnFormActions<R> {
           if (hasUnsavedChanges)
             Positioned(
               right: 0,
-              child: _buildRotatedUnsavedText(context),
+              child: _LnUnsavedNotifierState._buildRotatedUnsavedText(context),
             ),
         ],
       );

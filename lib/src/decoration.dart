@@ -62,14 +62,14 @@ class LnDecoration {
   }
 
   LnDecoration apply({
-    Wrapped<String?>? label,
-    Wrapped<String?>? hint,
-    Wrapped<String?>? helper,
-    Wrapped<String?>? prefixText,
-    Wrapped<Widget?>? prefixIcon,
-    Wrapped<Widget?>? suffixIcon,
-    Wrapped<String?>? counter,
-    Wrapped<String?>? error,
+    Value<String?>? label,
+    Value<String?>? hint,
+    Value<String?>? helper,
+    Value<String?>? prefixText,
+    Value<Widget?>? prefixIcon,
+    Value<Widget?>? suffixIcon,
+    Value<String?>? counter,
+    Value<String?>? error,
   }) {
     return LnDecoration(
       label: label == null ? this.label : label.value,

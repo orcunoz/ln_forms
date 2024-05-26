@@ -13,7 +13,6 @@ class CheckboxField extends LnSimpleField<bool?> {
     super.onSaved,
     super.enabled,
     super.readOnly,
-    super.clearable,
     super.restoreable,
     super.autofocus,
     super.focusNode,
@@ -25,6 +24,7 @@ class CheckboxField extends LnSimpleField<bool?> {
             "label or labelText must be passed"),
         super(
           useFocusNode: false,
+          clearable: false,
           decoration: LnDecoration(),
           style: null,
           builder: (field, computedState) {

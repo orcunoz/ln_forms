@@ -1,8 +1,9 @@
 import 'dart:async';
 
+import 'package:ln_core/ln_core.dart';
+
 import 'editable_scope.dart';
 import 'form.dart';
-import 'localization/forms_localizations.dart';
 
 typedef FormActionCallable<R> = FutureOr<R?> Function();
 
@@ -24,27 +25,9 @@ class FormAction<R> {
       _form.computedState.enabled &&
       (_checkEnabled == null || _checkEnabled!());
 
-  String get defaultButtonText {
-    final localizations = LnFormsLocalizations.of(_form.context);
-
-    if (this == _form.enableEditing) {
-      return localizations.editButton;
-    } else if (this == _form.cancelEditing) {
-      return localizations.cancelButton;
-    } else if (this == _form.submit) {
-      return localizations.saveButton;
-    } else if (this == _form.restore) {
-      return localizations.restoreButton;
-    } else if (this == _form.clear) {
-      return localizations.resetButton;
-    } else {
-      return localizations.okButton;
-    }
-  }
+  FormActionCallable? get callable => enabled ? call : null;
 
   FutureOr<R?> call() {
-    if (!enabled) return null;
-
     final futureOr = _callable!();
     if (futureOr is Future<R>) {
       _form._addRunningAction(this);
@@ -60,9 +43,9 @@ mixin LnFormActions<R> on LnFormFieldsHostState<R> {
   bool get inProgress => _runningActions.isNotEmpty;
 
   @override
-  EditableProps get scopedState => inProgress
-      ? super.scopedState.copyWith(enabled: (false,))
-      : super.scopedState;
+  EditableProps get editableProps => inProgress
+      ? super.editableProps.apply(enabled: Value(false))
+      : super.editableProps;
 
   bool isActionInProgress(FormAction action) =>
       _runningActions.contains(action);
@@ -71,7 +54,7 @@ mixin LnFormActions<R> on LnFormFieldsHostState<R> {
     bool empty = _runningActions.isEmpty;
     bool added = _runningActions.add(action);
     if (empty && added) {
-      didScopedEditableStateChanged();
+      notifyEditablePropsChanged();
     }
   }
 
@@ -79,14 +62,15 @@ mixin LnFormActions<R> on LnFormFieldsHostState<R> {
     bool last = _runningActions.length == 1;
     bool removed = _runningActions.remove(action);
     if (last && removed) {
-      didScopedEditableStateChanged();
+      notifyEditablePropsChanged();
     }
   }
 
-  late final enableEditing = FormAction(
+  /*late final enableEditing = FormAction(
     form: this as LnFormState<R>,
     checkEnabled: () => computedState.readOnly,
     callable: () {
+      Log.w("enableEditing");
       readOnly = false;
     },
   );
@@ -97,7 +81,7 @@ mixin LnFormActions<R> on LnFormFieldsHostState<R> {
     callable: () {
       readOnly = true;
     },
-  );
+  );*/
 
   late final clear = FormAction(
     form: this as LnFormState<R>,

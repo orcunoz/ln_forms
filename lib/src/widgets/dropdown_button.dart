@@ -206,8 +206,7 @@ class _DropdownMenuState<T> extends LnState<_DropdownMenu<T>> {
           ? Column(
               children: [
                 SearchTextBox(
-                  fillColor: theme.colorScheme.surface
-                      .blend(theme.colorScheme.onSurface, 5),
+                  fillColor: widget.route.menuDecoration.color,
                 ),
                 Expanded(child: list),
               ],
@@ -1113,8 +1112,4 @@ class DropdownButtonState<T> extends State<DropdownButton<T>>
       ),
     );
   }
-}
-
-class Value<T> extends Wrapped<T> {
-  Value(super.value);
 }

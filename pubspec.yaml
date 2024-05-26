@@ -1,6 +1,6 @@
 name: ln_forms
 description: Ln form and form fields
-version: 1.2.0
+version: 1.2.1
 repository: https://github.com/orcunoz/ln_forms
 publish_to: none
 
@@ -28,11 +28,6 @@ dependencies:
     #path: ../ln_dialogs
     git:
       url: https://github.com/orcunoz/ln_dialogs
-      ref: main
-  ln_alerts:
-    #path: ../ln_alerts
-    git:
-      url: https://github.com/orcunoz/ln_alerts
       ref: main
 
 flutter:
