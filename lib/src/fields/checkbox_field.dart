@@ -13,7 +13,6 @@ class CheckboxField extends LnSimpleField<bool?> {
     super.onSaved,
     super.enabled,
     super.readOnly,
-    super.restoreable,
     super.autofocus,
     super.focusNode,
     super.validator,
@@ -25,22 +24,19 @@ class CheckboxField extends LnSimpleField<bool?> {
         super(
           useFocusNode: false,
           clearable: false,
+          restoreable: false,
           decoration: LnDecoration(),
           style: null,
           builder: (field, computedState) {
             field as _CheckboxFieldState;
 
-            final Widget labelWidget = label ??
-                Text(
-                  labelText!,
-                );
             Widget child;
 
             if (computedState.readOnly) {
               child = Icon(
                 field.value == true ? Icons.check_rounded : Icons.clear_rounded,
-                color: field.baseStyle.color,
-                size: 22,
+                color: field.theme.colorScheme.onSurfaceVariant,
+                size: 21,
               );
             } else {
               child = AbsorbPointer(
@@ -64,19 +60,19 @@ class CheckboxField extends LnSimpleField<bool?> {
             }
 
             child = SpacedRow(
-              spacing: 12,
+              spacing: 8,
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.start,
               mainAxisSize: MainAxisSize.max,
               children: [
                 child,
-                Flexible(child: labelWidget),
+                Flexible(child: label ?? Text(labelText!)),
               ],
             );
 
             return DefaultTextStyle(
-              style: style ??
-                  field.theme.formFieldStyle.apply(fontSizeFactor: .95),
+              style:
+                  style ?? field.theme.formFieldStyle.apply(fontSizeFactor: .9),
               child: Transform.translate(
                 offset: Offset(0, computedState.readOnly ? -4 : 0),
                 child: child,
@@ -111,7 +107,8 @@ class _CheckboxFieldState extends LnSimpleFieldState<bool?> {
   @override
   InputDecoration? get computedDecoration {
     final decoration = super.computedDecoration!;
-    final defaultBorder = decoration.defaultBorder?.frameless;
+    final defaultBorder =
+        decoration.defaultBorder?.frameless ?? InputBorder.none;
     final padding = decoration.contentPadding?.resolve(textDirection);
     return decoration.copyWith(
       border: defaultBorder,
